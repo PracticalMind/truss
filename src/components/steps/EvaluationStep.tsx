@@ -1,4 +1,3 @@
-// src/components/steps/EvaluationStep.tsx
 import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip, ResponsiveContainer } from 'recharts';
@@ -15,7 +14,9 @@ interface EvaluationStepProps {
   sessionId: string | null;
 }
 
-const STEP_ID = 9; // optimization'a geçerken bu id ile data veriyoruz
+type ChartItem = { model: string; score: number };
+
+const STEP_ID = 9;
 
 const LOWER_IS_BETTER = new Set([
   'log_loss', 'rmse', 'mae', 'mse',
@@ -28,7 +29,6 @@ const NEUTRAL_METRICS = new Set([
 
 const CLUSTERING_MODELS = new Set(['KMeans', 'DBSCAN', 'AgglomerativeClustering']);
 
-/** Basit hover tooltip "i" bileşeni */
 const InfoBubble: React.FC<{ text: string; className?: string }> = ({ text, className }) => (
   <span className={`ml-2 relative inline-flex items-center group ${className || ''}`}>
     <span
@@ -47,7 +47,6 @@ const InfoBubble: React.FC<{ text: string; className?: string }> = ({ text, clas
   </span>
 );
 
-/** Metrik adı → açıklama anahtarı (i18n) */
 const metricDescKey = (metricKey: string) => `metric_${metricKey}_desc`;
 
 export const EvaluationStep: React.FC<EvaluationStepProps> = ({
@@ -61,13 +60,11 @@ export const EvaluationStep: React.FC<EvaluationStepProps> = ({
   const [evaluationResults, setEvaluationResults] = useState<any>(null);
   const [isEvaluating, setIsEvaluating] = useState(false);
 
-  // Export UI
   const [showExportModal, setShowExportModal] = useState(false);
   const [exportModelName, setExportModelName] = useState<string>('');
   const [exportFormat, setExportFormat] = useState<'joblib' | 'pkl' | 'onnx'>('joblib');
   const [isExporting, setIsExporting] = useState(false);
 
-  // How-to modal (model-aware)
   const [showHowto, setShowHowto] = useState<{
     open: boolean;
     format: 'joblib' | 'pkl' | 'onnx';
@@ -76,13 +73,12 @@ export const EvaluationStep: React.FC<EvaluationStepProps> = ({
     problemType?: string;
   } | null>(null);
 
-  const trainingResults = stepResults[8]; // Training adımı id=8
+  const trainingResults = stepResults[8];
 
   useEffect(() => {
     if (trainingResults) {
       performEvaluation();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [trainingResults]);
 
   const performEvaluation = async () => {
@@ -115,18 +111,20 @@ export const EvaluationStep: React.FC<EvaluationStepProps> = ({
     return 'accuracy';
   }, [problemType]);
 
-  const chartData = useMemo(() => {
+  const chartData: ChartItem[] = useMemo(() => {
     const res = evaluationResults?.results ?? [];
-    return res.map((r: any) => {
+    return res.map((r: any): ChartItem => {
       const metrics = r.metrics || {};
       let score = metrics[primaryMetricKey];
       if (typeof score !== 'number') {
-        const firstNumeric = Object.values(metrics).find(v => typeof v === 'number') as number | undefined;
+        const firstNumeric = Object.values(metrics).find(
+          (v) => typeof v === 'number'
+        ) as number | undefined;
         score = typeof firstNumeric === 'number' ? firstNumeric : 0;
       }
       return {
         model: String(r.model).replace(/([A-Z])/g, ' $1').trim(),
-        score
+        score,
       };
     });
   }, [evaluationResults, primaryMetricKey]);
@@ -140,12 +138,10 @@ export const EvaluationStep: React.FC<EvaluationStepProps> = ({
   const bestModel = backendBest || computedBestModel;
 
   useEffect(() => {
-    // Export modalı açıldığında default model olarak best'i seç
     if (showExportModal) {
       const models = (evaluationResults?.results || []).map((r: any) => r.model);
       setExportModelName(bestModel || models[0] || '');
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [showExportModal]);
 
   const getMetricColor = (metric: string, val: any) => {
@@ -153,12 +149,10 @@ export const EvaluationStep: React.FC<EvaluationStepProps> = ({
     if (!Number.isFinite(value)) return 'text-gray-300';
     if (NEUTRAL_METRICS.has(metric)) return 'text-gray-300';
 
-    // yüksek iyi
     if (!LOWER_IS_BETTER.has(metric)) {
       return value >= 0.8 ? 'text-green-400' : value >= 0.6 ? 'text-yellow-400' : 'text-red-400';
     }
 
-    // düşük iyi
     if (metric === 'davies_bouldin') {
       return value < 0.8 ? 'text-green-400' : value < 1.5 ? 'text-yellow-400' : 'text-red-400';
     }
@@ -178,12 +172,10 @@ export const EvaluationStep: React.FC<EvaluationStepProps> = ({
     onStepComplete(STEP_ID, evaluationResults);
   };
 
-  // --- How-to snippet üreticisi (model-aware) ---
   const buildHowto = (fmt: 'joblib'|'pkl'|'onnx', modelName: string, pType: string | undefined, filename: string) => {
     const isClustering = pType === 'clustering' || CLUSTERING_MODELS.has(modelName);
 
     if (fmt === 'onnx') {
-      // Pratikte KMeans ile daha uyumlu; diğerleri çoğunlukla desteklenmez.
       return `# install
 pip install onnxruntime
 
@@ -216,7 +208,6 @@ y_pred = model.predict(X)
 print(y_pred[:5])`;
       }
 
-      // --- clustering modelleri ---
       if (modelName === 'KMeans') {
         // KMeans: predict var
         return `${loader}
@@ -230,7 +221,6 @@ print(y_pred[:5])
 # For KMeans you can also inspect model.cluster_centers_.`;
       }
 
-      // DBSCAN / AgglomerativeClustering: predict yok
       return `${loader}
 
 # NOTE: ${modelName} does not implement .predict for new samples.
@@ -288,7 +278,6 @@ print(y_new[:5])`;
 
       toast.success(t('modelDownloaded') || 'Model downloaded.');
 
-      // Model + problemType bilgisi ile how-to aç
       setShowHowto({
         open: true,
         format: exportFormat,
@@ -447,7 +436,7 @@ print(y_new[:5])`;
                       const metricKey = metric as string;
                       const color = getMetricColor(metricKey, value);
                       const prettyName = metricKey.replace(/_/g, ' ');
-                      const desc = t(metricDescKey(metricKey)); // i18n’den kısa tanım
+                      const desc = t(metricDescKey(metricKey));
                       return (
                         <div key={metricKey} className="text-center">
                           <div className={`text-lg font-bold ${color}`}>

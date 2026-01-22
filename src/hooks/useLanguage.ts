@@ -1,4 +1,3 @@
-// src/hooks/useLanguage.ts
 import { useState, useEffect } from 'react';
 
 export type LanguageCode = 'en' | 'tr' | 'ku' | 'de' | 'es' | 'ru' | 'fr' | 'it';
@@ -10,7 +9,6 @@ interface Translations {
 }
 
 const translations: Translations = {
-  // ===== Navigation (Landing) =====
   welcome: {
     en: 'Welcome to GroveML',
     tr: "GroveML'e Hoş Geldiniz",

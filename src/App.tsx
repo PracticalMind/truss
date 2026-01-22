@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { WelcomePage } from './components/WelcomePage';
 import { MLPipeline } from './components/MLPipeline';
+import { apiService } from './services/api';
 
 function App() {
   const [currentView, setCurrentView] = useState<'welcome' | 'pipeline'>('welcome');
   const [sessionData, setSessionData] = useState<any>(null);
 
-  // Restore session on page refresh
   useEffect(() => {
     const savedView = localStorage.getItem('GroveML-current-view');
     const savedSession = localStorage.getItem('GroveML-session-data');
@@ -16,9 +16,13 @@ function App() {
         const parsedSession = JSON.parse(savedSession);
         setCurrentView('pipeline');
         setSessionData(parsedSession);
+
+        if (parsedSession?.session_id) {
+          apiService.currentSessionId = parsedSession.session_id;
+        }
+
       } catch (error) {
         console.error('Error parsing saved session:', error);
-        // Clear corrupted data
         localStorage.removeItem('GroveML-current-view');
         localStorage.removeItem('GroveML-session-data');
       }

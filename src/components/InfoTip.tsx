@@ -60,13 +60,10 @@ export const InfoTip: React.FC<InfoTipProps> = ({
     const vw = window.innerWidth;
     const vh = window.innerHeight;
 
-    // First measure with a reasonable width
-    // (tip.offsetWidth may be 0 before rendered; use maxWidth as fallback)
     const tw = Math.min(maxWidth, tip.offsetWidth || maxWidth);
     const th = tip.offsetHeight || 0;
     const margin = 10;
 
-    // Default: bottom centered
     let place: 'top' | 'bottom' | 'left' | 'right' = 'bottom';
     let top = ar.bottom + margin;
     let left = clamp(ar.left + ar.width / 2 - tw / 2, 8, vw - tw - 8);
@@ -74,21 +71,18 @@ export const InfoTip: React.FC<InfoTipProps> = ({
     const notEnoughBottom = top + th > vh - 8;
     if (placement === 'auto') {
       if (notEnoughBottom) {
-        // Try top
         const tryTop = ar.top - th - margin;
         if (tryTop >= 8) {
           place = 'top';
           top = tryTop;
           left = clamp(ar.left + ar.width / 2 - tw / 2, 8, vw - tw - 8);
         } else {
-          // Try right
           const tryRight = ar.right + margin;
           if (tryRight + tw <= vw - 8) {
             place = 'right';
             left = tryRight;
             top = clamp(ar.top + ar.height / 2 - th / 2, 8, vh - th - 8);
           } else {
-            // Fallback left
             const tryLeft = ar.left - tw - margin;
             place = 'left';
             left = Math.max(8, tryLeft);
@@ -97,7 +91,6 @@ export const InfoTip: React.FC<InfoTipProps> = ({
         }
       }
     } else {
-      // Forced placement
       switch (placement) {
         case 'top':
           place = 'top';
@@ -125,10 +118,8 @@ export const InfoTip: React.FC<InfoTipProps> = ({
     setCoords({ top, left, place });
   };
 
-  // Recompute on open, resize, scroll, text change
   useEffect(() => {
     if (!open) return;
-    // Wait a frame to ensure the tip is in the DOM and sized
     const id = requestAnimationFrame(computePosition);
     const onResize = () => computePosition();
     const onScroll = () => computePosition();
@@ -139,10 +130,8 @@ export const InfoTip: React.FC<InfoTipProps> = ({
       window.removeEventListener('resize', onResize);
       window.removeEventListener('scroll', onScroll, true);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open, placement, maxWidth, text]);
 
-  // Close on Escape
   useEffect(() => {
     if (!open) return;
     const onKey = (e: KeyboardEvent) => {

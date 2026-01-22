@@ -41,19 +41,16 @@ export const OutlierHandlingStep: React.FC<Props> = ({
 }) => {
   const { t } = useLanguage();
 
-  // --- Detection state ---
   const [detectMethod, setDetectMethod] = useState<DetectMethod>('iqr');
   const [detectFactor, setDetectFactor] = useState<number>(1.5);
   const [columnDetectConfigs, setColumnDetectConfigs] = useState<Omit<ColumnConfig, 'replaceWithNaN' | 'strategy'>[]>([]);
   const [outlierResults, setOutlierResults] = useState<Record<string, { count: number; values: number[]; method: string }>>({});
   const [isDetecting, setIsDetecting] = useState<boolean>(false);
 
-  // Abort / debounce refs for detection
   const detectAbortRef = useRef<AbortController | null>(null);
   const detectTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const detectSeqRef   = useRef(0);
 
-  // --- Removal state ---
   const [strategy, setStrategy] = useState<Strategy>('remove');
   const [globalMethod, setGlobalMethod] = useState<DetectMethod>('iqr');
   const [globalFactor, setGlobalFactor] = useState<number>(1.5);
@@ -61,7 +58,6 @@ export const OutlierHandlingStep: React.FC<Props> = ({
   const [isRemovingGlobal, setIsRemovingGlobal] = useState<boolean>(false);
   const [isRemovingColumn, setIsRemovingColumn] = useState<boolean>(false);
 
-  // --- Snapshot (undo için) yalnızca ilk apply öncesi bir kez alınır (stepId=4) ---
   const hasSnapRef = useRef(false);
   const ensureSnapshot = async () => {
     if (hasSnapRef.current) return;
@@ -69,7 +65,7 @@ export const OutlierHandlingStep: React.FC<Props> = ({
       await apiService.snapshotStep({ stepId: 4 });
       hasSnapRef.current = true;
     } catch {
-      // sessiz geç
+      // ignore
     }
   };
 
@@ -87,7 +83,6 @@ export const OutlierHandlingStep: React.FC<Props> = ({
     });
   };
 
-  // ---- Helpers: numeric check
   const isProbablyNumeric = (col: string) => {
     const raw = processedData?.dtypes?.[col];
     if (!raw) return true;
@@ -96,7 +91,6 @@ export const OutlierHandlingStep: React.FC<Props> = ({
     return keys.some(k => s.includes(k));
   };
 
-  // ---- Cancel detection
   const cancelDetection = () => {
     detectAbortRef.current?.abort();
     detectSeqRef.current++;
@@ -104,14 +98,12 @@ export const OutlierHandlingStep: React.FC<Props> = ({
     toast(t('cancel'));
   };
 
-  // ---- Detect (debounced + abortable)
   useEffect(() => {
     if (!processedData) return;
 
     if (detectTimerRef.current) clearTimeout(detectTimerRef.current);
 
     detectTimerRef.current = setTimeout(async () => {
-      // Abort previous request
       detectAbortRef.current?.abort();
       const controller = new AbortController();
       detectAbortRef.current = controller;
@@ -128,11 +120,9 @@ export const OutlierHandlingStep: React.FC<Props> = ({
               columnDetectConfigs.map(c => [c.column, { method: c.method, factor: c.factor }])
             )
           },
-          // forward signal if apiService supports it; harmless otherwise
           { signal: controller.signal } as any
         );
 
-        // Ignore stale responses
         if (mySeq !== detectSeqRef.current) return;
 
         if (resp?.error) {
@@ -159,14 +149,12 @@ export const OutlierHandlingStep: React.FC<Props> = ({
   }, [processedData, detectMethod, detectFactor, columnDetectConfigs]);
 
   useEffect(() => {
-    // cleanup on unmount
     return () => {
       detectAbortRef.current?.abort();
       if (detectTimerRef.current) clearTimeout(detectTimerRef.current);
     };
   }, []);
 
-  // ---- Summary
   const totalOutliers = Object.values(outlierResults).reduce((sum, r) => sum + r.count, 0);
   const affectedCols  = Object.values(outlierResults).filter(r => r.count > 0).length;
   const outlierPct    = processedData
@@ -177,7 +165,6 @@ export const OutlierHandlingStep: React.FC<Props> = ({
     outliers: r.count
   })).sort((a,b)=>b.outliers-a.outliers);
 
-  // ---- Detect configs
   const addColumnDetect = () => {
     const avail = (processedData?.columns || []).filter(c =>
       !columnDetectConfigs.some(x => x.column === c) && isProbablyNumeric(c)
@@ -197,7 +184,6 @@ export const OutlierHandlingStep: React.FC<Props> = ({
       prev.map((c, idx) => idx === i ? { ...c, [field]: value } : c)
     );
 
-  // ---- Remove configs
   const getAvailableRemoveColumns = (current?: string) => {
     const cols = processedData?.columns || [];
     return cols.filter(col => {
@@ -232,12 +218,11 @@ export const OutlierHandlingStep: React.FC<Props> = ({
       prev.map((c, idx) => idx === i ? { ...c, [field]: value } : c)
     );
 
-  // ---- Apply (global)
   const handleGlobalRemove = async () => {
     if (!processedData) return;
     setIsRemovingGlobal(true);
     try {
-      await ensureSnapshot(); // ilk apply’den önce snapshot
+      await ensureSnapshot();
       const payload: any = { strategy, method: globalMethod, factor: globalFactor };
       const resp = await apiService.removeOutliers(payload);
       if (resp.error) {
@@ -259,12 +244,11 @@ export const OutlierHandlingStep: React.FC<Props> = ({
     }
   };
 
-  // ---- Apply (column-specific)
   const handleColumnRemove = async () => {
     if (!processedData || columnRemoveConfigs.length === 0) return;
     setIsRemovingColumn(true);
     try {
-      await ensureSnapshot(); // ilk apply’den önce snapshot
+      await ensureSnapshot();
       const payload: any = {
         column_configs: Object.fromEntries(
           columnRemoveConfigs.map(c => [c.column, {

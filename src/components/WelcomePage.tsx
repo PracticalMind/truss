@@ -1,4 +1,3 @@
-// src/components/WelcomePage.tsx
 import React from 'react';
 import { motion } from 'framer-motion';
 import { ArrowRight, Sparkles, Zap, Target } from 'lucide-react';
@@ -14,7 +13,6 @@ interface WelcomePageProps {
 export const WelcomePage: React.FC<WelcomePageProps> = ({ onGetStarted }) => {
   const { t, isLoaded } = useLanguage();
 
-  // Dil yüklenene kadar flash'ı engelle
   if (!isLoaded) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-black via-gray-950 to-black flex items-center justify-center">

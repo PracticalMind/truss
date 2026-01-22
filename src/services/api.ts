@@ -8,7 +8,7 @@ const USE_BACKEND = import.meta.env.VITE_USE_BACKEND === 'true';
 class ApiService {
   private sessionData: any = null;
   private sessionHistory: any[] = [];
-  private currentSessionId: string = '';
+  public currentSessionId: string = '';
 
   async uploadDataset(file: File): Promise<ApiResponse> {
     if (USE_BACKEND) {
@@ -26,7 +26,7 @@ class ApiService {
       }
 
       this.sessionData = response.data;
-      this.currentSessionId = response.data?.session_id || '';
+      this.currentSessionId = (response.data as any)?.session_id || '';
       this.sessionHistory = [{ ...this.sessionData }];
 
       return { data: this.sessionData };
@@ -132,9 +132,9 @@ class ApiService {
     }
   }
 
-  async analyzeData(): Promise<ApiResponse> {
+  async analyzeDataset(params?: { target?: string }): Promise<ApiResponse> {
     if (USE_BACKEND) {
-      return apiClient.post(API_ENDPOINTS.DATASET.ANALYZE);
+      return apiClient.post(API_ENDPOINTS.DATASET.ANALYZE, params ?? {});
     }
 
     try {
@@ -260,6 +260,90 @@ class ApiService {
     }
   }
 
+  async encodeFeatures(payload: any): Promise<ApiResponse> {
+    if (USE_BACKEND) {
+      try {
+
+        let method: string | null = null;
+        let columns: string[] = [];
+
+        if (Array.isArray(payload?.column_specific_settings)) {
+          const settings = payload.column_specific_settings as Array<{
+            column: string;
+            strategy: string;
+            ordinal?: boolean;
+          }>;
+
+          const strategies = Array.from(
+            new Set(settings.map((s) => s.strategy))
+          );
+
+          if (strategies.length > 1) {
+            return {
+              error:
+                'Backend currently supports only one encoding method per request. Please use a single strategy for all selected columns.',
+            };
+          }
+
+          const s = strategies[0];
+
+          if (!['label', 'onehot', 'ordinal'].includes(s)) {
+            return {
+              error:
+                'Current backend implementation only supports label / onehot / ordinal encoding.',
+            };
+          }
+
+          method = s;
+          columns = settings.map((s) => s.column);
+        }
+        else if (payload?.default_strategy) {
+          const s = payload.default_strategy as string;
+
+          if (!['label', 'onehot', 'ordinal'].includes(s)) {
+            return {
+              error:
+                'Current backend implementation only supports label / onehot / ordinal encoding for default strategy.',
+            };
+          }
+
+          method = s;
+
+          if (this.sessionData?.columns) {
+            columns = this.sessionData.columns;
+          } else {
+            return { error: 'No session data available for encoding.' };
+          }
+        }
+
+        if (!method || !columns.length) {
+          return {
+            error: 'No columns or method resolved for encoding.',
+          };
+        }
+
+        const resp = await apiClient.post(
+          API_ENDPOINTS.PREPROCESSING.ENCODING,
+          { method, columns }
+        );
+        return resp;
+      } catch (error: any) {
+        return {
+          error: error.message || 'Encoding failed',
+        };
+      }
+    }
+
+    try {
+      if (!this.sessionData) {
+        return { error: 'No session data available for encoding' };
+      }
+      return { data: this.sessionData };
+    } catch (error: any) {
+      return { error: error.message || 'Encoding failed' };
+    }
+  }
+
   async encodeColumns(params: { columns: string[]; method: string }): Promise<ApiResponse> {
     if (USE_BACKEND) {
       return apiClient.post(API_ENDPOINTS.PREPROCESSING.ENCODING, params);
@@ -321,6 +405,10 @@ class ApiService {
     }
   }
 
+  async evaluateModels(): Promise<ApiResponse> {
+    return this.evaluateModel();
+  }
+
   async optimizeModel(params: any): Promise<ApiResponse> {
     if (USE_BACKEND) {
       return apiClient.post(API_ENDPOINTS.MODEL.OPTIMIZE, params);
@@ -335,6 +423,134 @@ class ApiService {
       };
     } catch (error: any) {
       return { error: error.message || 'Optimization failed' };
+    }
+  }
+
+  async exportModel(params: {
+    selected_model: string;
+    model_name: string;
+    format: 'joblib' | 'pkl' | 'onnx';
+  }): Promise<ApiResponse<{ blob: Blob; filename: string }>> {
+    if (USE_BACKEND) {
+      return {
+        error: 'Model export is not implemented on the backend yet.',
+      };
+    }
+
+    try {
+      const content = JSON.stringify(
+        {
+          note: 'This is a dummy exported model placeholder (frontend-only).',
+          selected_model: params.selected_model,
+          format: params.format,
+          timestamp: new Date().toISOString(),
+        },
+        null,
+        2
+      );
+
+      const blob = new Blob([content], { type: 'application/json' });
+      const filename = `${params.model_name || 'model'}.${params.format}`;
+
+      return {
+        data: {
+          blob,
+          filename,
+        },
+      };
+    } catch (error: any) {
+      return {
+        error: error.message || 'Model export failed',
+      };
+    }
+  }
+
+  async correlationAnalysis(params: {
+    threshold: number;
+    preview_only?: boolean;
+    columns_to_drop?: string[];
+  }): Promise<ApiResponse> {
+    try {
+      const { threshold, preview_only, columns_to_drop } = params;
+
+      const corrRes = await this.getCorrelationMatrix();
+      if (corrRes.error) {
+        return { error: corrRes.error };
+      }
+
+      const corrData = corrRes.data as {
+        correlation_matrix: Record<string, Record<string, number>>;
+        columns: string[];
+      };
+
+      const matrix = corrData?.correlation_matrix || {};
+      const cols: string[] = corrData?.columns || [];
+
+      const highly_correlated: { col1: string; col2: string; correlation: number }[] = [];
+
+      for (let i = 0; i < cols.length; i++) {
+        for (let j = i + 1; j < cols.length; j++) {
+          const c1 = cols[i];
+          const c2 = cols[j];
+          const val = matrix[c1]?.[c2];
+          const corr = typeof val === 'number' ? val : 0;
+
+          if (Math.abs(corr) >= threshold) {
+            highly_correlated.push({ col1: c1, col2: c2, correlation: corr });
+          }
+        }
+      }
+
+      if (preview_only) {
+        return { data: { highly_correlated } };
+      }
+
+      const dropped_columns = columns_to_drop ?? [];
+
+      if (dropped_columns.length > 0 && this.sessionData) {
+        const current = this.sessionData;
+
+        const newColumns = current.columns.filter(
+          (col: string) => !dropped_columns.includes(col)
+        );
+        const colIndices = current.columns
+          .map((col: string, idx: number) =>
+            dropped_columns.includes(col) ? -1 : idx
+          )
+          .filter((idx: number) => idx !== -1);
+
+        const newData = current.data.map((row: any[]) =>
+          colIndices.map((idx: number) => row[idx])
+        );
+
+        const next = {
+          ...current,
+          columns: newColumns,
+          data: newData,
+          shape: [newData.length, newColumns.length] as [number, number],
+        };
+
+        this.sessionData = next;
+
+        return {
+          data: {
+            ...next,
+            dropped_columns,
+            highly_correlated,
+          },
+        };
+      }
+
+      return {
+        data: {
+          dropped_columns,
+          highly_correlated,
+        },
+      };
+    } catch (error: any) {
+      return {
+        error: error.message || 'Correlation analysis failed',
+      };
     }
   }
 

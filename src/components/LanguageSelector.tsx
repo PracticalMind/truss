@@ -15,7 +15,6 @@ export const LanguageSelector: React.FC = () => {
     setIsOpen(false);
   };
 
-  // Dışarı tıklama (mousedown yerine pointerdown + composedPath ile daha sağlam)
   useEffect(() => {
     if (!isOpen) return;
 
@@ -25,7 +24,6 @@ export const LanguageSelector: React.FC = () => {
         dropdownRef.current &&
         (path as EventTarget[]).includes(dropdownRef.current)
       ) {
-        // dropdown içi tıklama => kapatma yok
         return;
       }
       setIsOpen(false);
@@ -35,7 +33,6 @@ export const LanguageSelector: React.FC = () => {
     return () => document.removeEventListener('pointerdown', onPointerDown);
   }, [isOpen]);
 
-  // ESC ile kapat
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => {
@@ -80,9 +77,8 @@ export const LanguageSelector: React.FC = () => {
               <motion.button
                 type="button"
                 key={lang.code}
-                // onClick yerine onMouseDown: dışarı tıklama dinleyicisinden önce çalışır
                 onMouseDown={(e) => {
-                  e.preventDefault(); // focus/blur karmaşasını engelle
+                  e.preventDefault();
                   handleLanguageChange(lang.code);
                 }}
                 className={`w-full flex items-center gap-3 px-4 py-3 text-left hover:bg-gray-700 transition-colors ${

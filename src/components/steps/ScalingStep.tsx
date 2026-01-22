@@ -1,4 +1,3 @@
-// src/components/steps/ScalingStep.tsx
 import React, { useMemo, useState, useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Minus } from 'lucide-react';
@@ -37,7 +36,6 @@ export const ScalingStep: React.FC<ScalingStepProps> = ({
 
   const STEP_ID = 7;
 
-  // --- Snapshot (undo) — diğer adımlarla aynı mantık ---
   const hasSnapRef = useRef(false);
   const ensureSnapshot = async () => {
     if (hasSnapRef.current) return;
@@ -45,11 +43,10 @@ export const ScalingStep: React.FC<ScalingStepProps> = ({
       await apiService.snapshotStep({ stepId: STEP_ID });
       hasSnapRef.current = true;
     } catch {
-      // sessiz geç
+      // ignore
     }
   };
 
-  // DataTable (drop/undo) -> parent senkron
   const handlePreviewUpdate = (payload: {
     data: any[][];
     columns: string[];
@@ -130,7 +127,6 @@ export const ScalingStep: React.FC<ScalingStepProps> = ({
 
     setIsProcessingGlobal(true);
     try {
-      // --- İlk kez uygulamadan önce snapshot al (undo için) ---
       await ensureSnapshot();
 
       const response = await apiService.scaleFeatures({
@@ -165,7 +161,6 @@ export const ScalingStep: React.FC<ScalingStepProps> = ({
 
     setIsProcessingColumn(true);
     try {
-      // --- İlk kez uygulamadan önce snapshot al (undo için) ---
       await ensureSnapshot();
 
       const mapping: Record<string, string> = Object.fromEntries(

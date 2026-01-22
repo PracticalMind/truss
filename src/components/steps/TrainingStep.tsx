@@ -51,14 +51,12 @@ export const TrainingStep: React.FC<TrainingStepProps> = ({
     } as ProcessedData);
   };
 
-  // --- MODEL KATALOGLARI ---
   const classificationModels = [
     'LogisticRegression',
     'RandomForestClassifier',
     'DecisionTreeClassifier',
     'KNeighborsClassifier',
     'SVC',
-    // Yeni
     'XGBClassifier',
     'LGBMClassifier',
     'CatBoostClassifier',
@@ -73,7 +71,6 @@ export const TrainingStep: React.FC<TrainingStepProps> = ({
     'DecisionTreeRegressor',
     'KNeighborsRegressor',
     'SVR',
-    // Yeni
     'XGBRegressor',
     'LGBMRegressor',
     'CatBoostRegressor',
@@ -87,7 +84,6 @@ export const TrainingStep: React.FC<TrainingStepProps> = ({
     'KMeans',
     'DBSCAN',
     'AgglomerativeClustering',
-    // Yeni
     'GaussianMixture',
     'Birch',
     'MeanShift',

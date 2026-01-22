@@ -1,4 +1,3 @@
-// src/components/steps/AnalysisStep.tsx
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import {
@@ -47,7 +46,12 @@ type Extras = {
   feature_target_assoc?: Record<string, { score: number; test: string }>;
 };
 
-/** Collapsible card shell */
+const formatToTwoDecimals = (value: any, _entry: any, _index: number) => {
+  const num = Number(value);
+  if (!Number.isFinite(num)) return '';
+  return num.toFixed(2);
+};
+
 const CollapsibleCard: React.FC<{
   isOpen: boolean;
   onToggle: () => void;
@@ -104,10 +108,8 @@ export const AnalysisStep: React.FC<AnalysisStepProps> = ({
   const [analysisResults, setAnalysisResults] = useState<any>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
 
-  // Collapsible state: combined quality & associations
   const [isQualityAssocOpen, setIsQualityAssocOpen] = useState(false);
 
-  // Opsiyonel: hedefe göre içgörü (keşif)
   const [insightTarget, setInsightTarget] = useState<string>('');
 
   const prevColsSig = useRef<string>('');
@@ -183,7 +185,6 @@ export const AnalysisStep: React.FC<AnalysisStepProps> = ({
     performAnalysis(insightTarget || undefined);
   };
 
-  // ---- Data Quality Score & uyarılar (frontend) ----
   const quality = useMemo(() => {
     if (!analysisResults && !processedData) return null;
 
@@ -233,7 +234,6 @@ export const AnalysisStep: React.FC<AnalysisStepProps> = ({
     return { rows, cols, missingPct, constantCols, idLikeCols, highCardCat, score };
   }, [analysisResults, processedData]);
 
-  // ---- Küçük backend ekleri ----
   const extras: Extras = {
     vif: analysisResults?.vif,
     missing_patterns: analysisResults?.missing_patterns,
@@ -242,7 +242,6 @@ export const AnalysisStep: React.FC<AnalysisStepProps> = ({
     feature_target_assoc: analysisResults?.feature_target_assoc
   };
 
-  // Görseller için hazırlanmış veri
   const rowMissingHist = useMemo(() => {
     const raw = extras.missing_patterns?.row_missing_hist ?? [];
     return raw.map(([miss, freq]) => ({ missing: miss, rows: freq }));
@@ -653,7 +652,12 @@ export const AnalysisStep: React.FC<AnalysisStepProps> = ({
                   <YAxis stroke="#9ca3af" fontSize={12} />
                   <Tooltip contentStyle={{ backgroundColor: 'rgba(17, 24, 39, 0.95)', border: '1px solid #374151', borderRadius: '8px' }} />
                   <Bar dataKey="vif" fill="url(#redPinkGradient)" radius={[4, 4, 0, 0]}>
-                    <LabelList dataKey="vif" position="top" formatter={(v: number)=>v.toFixed(2)} fontSize={10} />
+                    <LabelList
+                      dataKey="vif"
+                      position="top"
+                      formatter={formatToTwoDecimals as any}
+                      fontSize={10}
+                    />
                   </Bar>
                   <defs>
                     <linearGradient id="redPinkGradient" x1="0" y1="0" x2="0" y2="1">
@@ -779,7 +783,12 @@ export const AnalysisStep: React.FC<AnalysisStepProps> = ({
                             <YAxis stroke="#9ca3af" fontSize={12} />
                             <Tooltip contentStyle={{ backgroundColor: 'rgba(17, 24, 39, 0.95)', border: '1px solid #374151', borderRadius: '8px' }} />
                             <Bar dataKey="corr" fill="url(#yellowGradient)" radius={[4, 4, 0, 0]}>
-                              <LabelList dataKey="corr" position="top" formatter={(v: number)=>v.toFixed(2)} fontSize={10} />
+                                <LabelList
+                                  dataKey="corr"
+                                  position="top"
+                                  formatter={formatToTwoDecimals as any}
+                                  fontSize={10}
+                                />
                             </Bar>
                             <defs>
                               <linearGradient id="yellowGradient" x1="0" y1="0" x2="0" y2="1">
@@ -816,7 +825,12 @@ export const AnalysisStep: React.FC<AnalysisStepProps> = ({
                         <YAxis stroke="#9ca3af" domain={[0,1]} fontSize={12} />
                         <Tooltip contentStyle={{ backgroundColor: 'rgba(17, 24, 39, 0.95)', border: '1px solid #374151', borderRadius: '8px' }} />
                         <Bar dataKey="v" fill="url(#greenGradient)" radius={[4, 4, 0, 0]}>
-                          <LabelList dataKey="v" position="top" formatter={(v: number)=>v.toFixed(2)} fontSize={10} />
+                            <LabelList
+                              dataKey="v"
+                              position="top"
+                              formatter={formatToTwoDecimals as any}
+                              fontSize={10}
+                            />
                         </Bar>
                         <defs>
                           <linearGradient id="greenGradient" x1="0" y1="0" x2="0" y2="1">

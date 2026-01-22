@@ -1,4 +1,3 @@
-// src/components/steps/MissingValuesStep.tsx
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Minus } from 'lucide-react';
@@ -42,52 +41,43 @@ export const MissingValuesStep: React.FC<MissingValuesStepProps> = ({
 }) => {
   const { t } = useLanguage();
 
-  // -- Ayarlar
   const [strategy, setStrategy] = useState('mean');
   const [catStrategy, setCatStrategy] = useState('mode');
   const [fillValue, setFillValue] = useState('unknown');
   const [dropStrategy, setDropStrategy] = useState<string | null>(null);
   const [columnSpecificSettings, setColumnSpecificSettings] = useState<ColumnSpecificSetting[]>([]);
 
-  // -- Durum flag'leri
   const [isProcessingGlobal, setIsProcessingGlobal] = useState(false);
   const [isProcessingColumn, setIsProcessingColumn] = useState(false);
 
-  // -- Eksik değer bilgisi: { columnName: count }
   const [missingInfo, setMissingInfo] = useState<Record<string, number>>({});
 
-  // --- Snapshot (undo için) yalnızca ilk apply öncesi bir kez alınır
   const hasSnapRef = useRef(false);
   const ensureSnapshot = async () => {
     if (hasSnapRef.current) return;
     try {
-      // Missing Values adımı: stepId = 3
       await apiService.snapshotStep({ stepId: 3 });
       hasSnapRef.current = true;
     } catch {
-      // sessiz geç (backend snapshot yoksa ya da zaten alınmışsa)
+      // ignore
     }
   };
 
-  // processedData’dan gelen missingValues’u iç state’e yansıt
   useEffect(() => {
     if (processedData?.missingValues) {
       setMissingInfo(processedData.missingValues);
     }
   }, [processedData]);
 
-  // EĞER missingInfo yoksa (boşsa), bir kere analiz isteğiyle doldurmaya çalış
   useEffect(() => {
     const loadIfNeeded = async () => {
       if (!processedData) return;
       if (Object.keys(missingInfo || {}).length > 0) return;
-      // Önce parent’tan gelen varsa onu kullan, yoksa backend’den çek
       if (!processedData.missingValues) {
         try {
           const res = await apiService.analyzeDataset();
           if (!res.error && res.data?.missing_values) {
             setMissingInfo(res.data.missing_values);
-            // parent state’i de senkron tutmak istersen:
             onDataUpdate({
               data: res.data.data,
               columns: res.data.columns,
@@ -97,7 +87,7 @@ export const MissingValuesStep: React.FC<MissingValuesStepProps> = ({
             });
           }
         } catch {
-          // sessiz geç
+          // ignore
         }
       }
     };
@@ -126,7 +116,6 @@ export const MissingValuesStep: React.FC<MissingValuesStepProps> = ({
       const res = await apiService.analyzeDataset();
       if (!res.error && res.data?.missing_values) {
         setMissingInfo(res.data.missing_values);
-        // parent’a da yansıt (opsiyonel ama senkron kalır)
         onDataUpdate({
           data: res.data.data,
           columns: res.data.columns,
@@ -138,12 +127,11 @@ export const MissingValuesStep: React.FC<MissingValuesStepProps> = ({
     }
   };
 
-  // 2) GLOBAL APPLY
   const handleGlobalApply = async () => {
     if (!processedData) return;
     setIsProcessingGlobal(true);
     try {
-      await ensureSnapshot(); // ilk apply’den önce snapshot
+      await ensureSnapshot();
       const response = await apiService.handleMissingValues({
         strategy,
         cat_strategy: catStrategy,
@@ -178,7 +166,7 @@ export const MissingValuesStep: React.FC<MissingValuesStepProps> = ({
     if (!processedData || columnSpecificSettings.length === 0) return;
     setIsProcessingColumn(true);
     try {
-      await ensureSnapshot(); // ilk apply’den önce snapshot
+      await ensureSnapshot();
       const response = await apiService.handleMissingValues({
         column_specific_settings: columnSpecificSettings
       });
@@ -205,7 +193,6 @@ export const MissingValuesStep: React.FC<MissingValuesStepProps> = ({
     }
   };
 
-  // 4) Next step
   const handleFinalApply = () => {
     if (!processedData) return;
     onStepComplete(3, {
@@ -219,8 +206,6 @@ export const MissingValuesStep: React.FC<MissingValuesStepProps> = ({
     });
   };
 
-  // --- YENİ: tek noktadan "uygun kolon" hesabı ---
-  // missingInfo bilinmiyorsa (boşsa) tüm kolonları eklemeye izin veriyoruz (buton kilitli kalmasın).
   const getAvailableColumns = (current?: string) => {
     const cols = processedData?.columns || [];
     const missingKnown = Object.keys(missingInfo || {}).length > 0;
@@ -255,7 +240,6 @@ export const MissingValuesStep: React.FC<MissingValuesStepProps> = ({
     ? ((totalMissing / (processedData.shape[0] * processedData.shape[1])) * 100).toFixed(1)
     : '0.0';
 
-  // --- Chart data (dinamik) ---
   const chartData = useMemo(() => {
     return Object.entries(missingInfo || {})
       .filter(([, count]) => (count || 0) > 0)
@@ -268,7 +252,7 @@ export const MissingValuesStep: React.FC<MissingValuesStepProps> = ({
 
   return (
     <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="space-y-8">
-      {/* Başlık */}
+      {/* Header */}
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-white mb-2">{t('missingValues')} Handling</h2>
         <p className="text-gray-400">Configure how to handle missing values in your dataset</p>

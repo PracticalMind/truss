@@ -63,41 +63,47 @@ export const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, uploadedFi
     );
   }
 
+  const rootProps = getRootProps();
+
   return (
-    <motion.div
-      {...getRootProps()}
-      className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all duration-300 ${
-        isDragActive
+    <div
+      {...rootProps}
+      className={`border-2 border-dashed rounded-lg p-8 text-center cursor-pointer transition-all duration-300 ${isDragActive
           ? 'border-cyan-400 bg-cyan-400/10'
           : 'border-gray-600 hover:border-gray-500 hover:bg-gray-800/50'
-      }`}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
+        }`}
     >
-      <input {...getInputProps()} />
       <motion.div
-        animate={{
-          y: isDragActive ? -5 : 0,
-          scale: isDragActive ? 1.1 : 1
-        }}
-        className="flex flex-col items-center gap-4"
+        whileHover={{ scale: 1.02 }}
+        whileTap={{ scale: 0.98 }}
       >
-        <div className={`p-4 rounded-full ${
-          isDragActive ? 'bg-cyan-400/20' : 'bg-gray-700'
-        }`}>
-          <Upload className={`w-8 h-8 ${
-            isDragActive ? 'text-cyan-400' : 'text-gray-400'
-          }`} />
-        </div>
-        <div>
-          <div className="text-white font-medium mb-2">
-            {isDragActive ? 'Drop your file here' : 'Upload your dataset'}
+        <input {...getInputProps()} />
+        <motion.div
+          animate={{
+            y: isDragActive ? -5 : 0,
+            scale: isDragActive ? 1.1 : 1
+          }}
+          className="flex flex-col items-center gap-4"
+        >
+          <div
+            className={`p-4 rounded-full ${isDragActive ? 'bg-cyan-400/20' : 'bg-gray-700'
+              }`}
+          >
+            <Upload
+              className={`w-8 h-8 ${isDragActive ? 'text-cyan-400' : 'text-gray-400'
+                }`}
+            />
           </div>
-          <div className="text-gray-400 text-sm">
-            Supports CSV, XLSX files up to 100MB
+          <div>
+            <div className="text-white font-medium mb-2">
+              {isDragActive ? 'Drop your file here' : 'Upload your dataset'}
+            </div>
+            <div className="text-gray-400 text-sm">
+              Supports CSV, XLSX files up to 100MB
+            </div>
           </div>
-        </div>
+        </motion.div>
       </motion.div>
-    </motion.div>
+    </div>
   );
-};
+}

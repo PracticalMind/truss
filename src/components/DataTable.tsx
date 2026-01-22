@@ -1,4 +1,3 @@
-// src/components/DataTable.tsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Trash2, RotateCcw, AlertTriangle } from 'lucide-react';
@@ -20,13 +19,10 @@ interface DataTableProps {
 
   stepId?: number;
 
-  /** Başlık metni (örn: t('dataPreview')) */
   title?: string;
 
-  /** Başlığın yanında hover tooltip için metin (örn: t('infoDataPreview')) */
   titleInfoText?: string;
 
-  /** Gerekirse Undo'yu gizlemek için */
   hideUndo?: boolean;
 
   className?: string;
@@ -53,7 +49,6 @@ export const DataTable: React.FC<DataTableProps> = ({
   const [dropping, setDropping] = useState<Record<string, boolean>>({});
   const [isUndoing, setIsUndoing] = useState(false);
 
-  // Confirm dialog state
   const [confirmTarget, setConfirmTarget] = useState<{ col: string; colIdx: number } | null>(null);
 
   const snapshotTakenRef = useRef<boolean>(false);
@@ -78,7 +73,6 @@ export const DataTable: React.FC<DataTableProps> = ({
     if (scrollContainerRef.current) scrollContainerRef.current.scrollTop = 0;
   }, [localData, showAllRows]);
 
-  // Close modal with ESC, confirm with Enter
   useEffect(() => {
     if (!confirmTarget) return;
     const onKey = (e: KeyboardEvent) => {
@@ -90,7 +84,6 @@ export const DataTable: React.FC<DataTableProps> = ({
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [confirmTarget]);
 
   const rowCount = localData.length;
@@ -104,7 +97,7 @@ export const DataTable: React.FC<DataTableProps> = ({
   const handleScroll: React.UIEventHandler<HTMLDivElement> = (e) => {
     if (showAllRows) return;
     const el = e.currentTarget;
-    const nearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 24; // 24px buffer
+    const nearBottom = el.scrollTop + el.clientHeight >= el.scrollHeight - 24;
     if (nearBottom) {
       setVisibleCount((prev) => {
         const limit = Math.min(MAX_PREVIEW_ROWS, rowCount);
@@ -114,7 +107,6 @@ export const DataTable: React.FC<DataTableProps> = ({
     }
   };
 
-  // --- Optimistic helpers ---
   const optimisticRemove = (colIdx: number) => {
     setLocalColumns((prev) => prev.filter((_, i) => i !== colIdx));
     setLocalData((prev) => prev.map((row) => row.filter((_, i) => i !== colIdx)));
@@ -125,7 +117,6 @@ export const DataTable: React.FC<DataTableProps> = ({
     setLocalData(data);
   };
 
-  // --- Core drop logic ---
   const handleDropColumn = async (col: string, colIdx: number) => {
     if (!col) return;
     if (localColumns.length <= 1) {
@@ -136,7 +127,6 @@ export const DataTable: React.FC<DataTableProps> = ({
     try {
       setDropping((s) => ({ ...s, [col]: true }));
 
-      // First change on this step -> snapshot
       if (stepId && stepId > 0 && !snapshotTakenRef.current) {
         const snap = await apiService.snapshotStep({ step_id: stepId });
         if (snap.error) {
@@ -146,10 +136,8 @@ export const DataTable: React.FC<DataTableProps> = ({
         }
       }
 
-      // 1) optimistic
       optimisticRemove(colIdx);
 
-      // 2) backend drop
       const res = await apiService.dropColumns({ columns: [col] });
       if (res.error) {
         rollback();
@@ -157,7 +145,6 @@ export const DataTable: React.FC<DataTableProps> = ({
         return;
       }
 
-      // 3) refresh
       const fresh = await apiService.getSessionData();
       if (fresh.error || !fresh.data) {
         const fallbackCols: string[] = res.data?.columns ?? localColumns;
@@ -200,13 +187,11 @@ export const DataTable: React.FC<DataTableProps> = ({
     }
   };
 
-  // Open confirm dialog from trash button
   const requestDropColumn = (col: string, colIdx: number) => {
     if (dropping[col]) return;
     setConfirmTarget({ col, colIdx });
   };
 
-  // Confirm dialog -> proceed
   const doDropConfirmed = async () => {
     if (!confirmTarget) return;
     const { col, colIdx } = confirmTarget;
@@ -271,7 +256,6 @@ export const DataTable: React.FC<DataTableProps> = ({
     return <div className="text-gray-400 text-sm">No columns to display.</div>;
   }
 
-  // Cell text render (shorten / expand)
   const toggleCell = (key: string) => {
     setExpandedCells((prev) => {
       const next = new Set(prev);

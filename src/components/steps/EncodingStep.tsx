@@ -1,4 +1,3 @@
-// src/components/steps/EncodingStep.tsx
 import React, { useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { Plus, Minus } from 'lucide-react';
@@ -41,32 +40,28 @@ export const EncodingStep: React.FC<Props> = ({
 }) => {
   const { t } = useLanguage();
 
-  // -------- Global --------
   const [defaultStrategy, setDefaultStrategy] = useState<Strategy>('auto');
   const [maxCategories, setMaxCategories] = useState<number>(10);
   const [targetColumn, setTargetColumn] = useState<string>('');
   const [isApplyingGlobal, setIsApplyingGlobal] = useState(false);
 
-  // -------- Column-specific --------
   const [columnSettings, setColumnSettings] = useState<ColumnSetting[]>([]);
   const [isApplyingColumns, setIsApplyingColumns] = useState(false);
 
   const allColumns = processedData?.columns ?? [];
   const targetOptions = useMemo(() => allColumns, [allColumns]);
 
-  // --- Snapshot (undo için) yalnızca ilk apply öncesi bir kez alınır (stepId=5) ---
   const hasSnapRef = useRef(false);
   const ensureSnapshot = async () => {
     if (hasSnapRef.current) return;
     try {
-      await apiService.snapshotStep({ stepId: 5 });
+      await apiService.snapshotStep({ step_id: 5 });
       hasSnapRef.current = true;
     } catch {
-      // sessiz geç
+      // ignore
     }
   };
 
-  // DataTable (drop/undo) -> parent sync
   const handlePreviewUpdate = (payload: {
     data: any[][];
     columns: string[];
@@ -125,7 +120,7 @@ export const EncodingStep: React.FC<Props> = ({
         payload.target_column = targetColumn;
       }
 
-      // ---- İlk kez apply edilirken snapshot al ----
+
       await ensureSnapshot();
 
       const resp = await apiService.encodeFeatures(payload);
@@ -175,7 +170,7 @@ export const EncodingStep: React.FC<Props> = ({
         payload.target_column = targetColumn;
       }
 
-      // ---- İlk kez apply edilirken snapshot al ----
+
       await ensureSnapshot();
 
       const resp = await apiService.encodeFeatures(payload);
@@ -211,7 +206,7 @@ export const EncodingStep: React.FC<Props> = ({
 
   return (
     <motion.div initial={{opacity:0,y:20}} animate={{opacity:1,y:0}} className="space-y-8">
-      {/* Başlık */}
+      {/* Header */}
       <div className="text-center mb-8">
         <h2 className="text-2xl font-bold text-white mb-2">{t('encoding')}</h2>
         <p className="text-gray-400">{t('encodingSubtitle')}</p>

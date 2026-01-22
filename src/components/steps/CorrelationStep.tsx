@@ -1,4 +1,3 @@
-// src/components/steps/CorrelationStep.tsx
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
 import { DataTable } from '../DataTable';
@@ -33,19 +32,17 @@ export const CorrelationStep: React.FC<CorrelationStepProps> = ({
   const [selections, setSelections] = useState<Record<number, 'col1' | 'col2' | undefined>>({});
   const [lastDropped, setLastDropped] = useState<string[]>([]);
 
-  // --- Snapshot (undo) — Encoding/Missing/Outlier ile aynı mantık ---
   const hasSnapRef = useRef(false);
   const ensureSnapshot = async () => {
     if (hasSnapRef.current) return;
     try {
-      await apiService.snapshotStep({ stepId: 6 });
+      await apiService.snapshotStep({ step_id: 6 });
       hasSnapRef.current = true;
     } catch {
-      // sessiz geç
+      // ignore
     }
   };
 
-  // DataTable (drop/undo) -> parent senkron
   const handlePreviewUpdate = (payload: {
     data: any[][];
     columns: string[];
@@ -60,7 +57,7 @@ export const CorrelationStep: React.FC<CorrelationStepProps> = ({
     } as ProcessedData);
   };
 
-  // --- PREVIEW ---
+  // preview
   useEffect(() => {
     let alive = true;
     (async () => {
@@ -113,7 +110,6 @@ export const CorrelationStep: React.FC<CorrelationStepProps> = ({
     }
     setIsApplying(true);
     try {
-      // ---- İlk kez uygulamadan önce snapshot al (undo için) ----
       await ensureSnapshot();
 
       const res = await apiService.correlationAnalysis({
@@ -135,7 +131,6 @@ export const CorrelationStep: React.FC<CorrelationStepProps> = ({
         setLastDropped(dropped);
         toast.success(`${dropped.length} ${t('columnsDropped')}.`);
 
-        // Uygulama sonrası tekrar önizleme
         setIsPreviewing(true);
         const pv = await apiService.correlationAnalysis({ threshold, preview_only: true });
         setIsPreviewing(false);
@@ -165,7 +160,7 @@ export const CorrelationStep: React.FC<CorrelationStepProps> = ({
       animate={{ opacity: 1, y: 0 }}
       className="space-y-8"
     >
-      {/* Başlık */}
+      {/* Header */}
       <div className="text-center mb-8">
         <div className="flex items-center justify-center gap-2">
           <h2 className="text-2xl font-bold text-white mb-2">{t('correlationAnalysis')}</h2>

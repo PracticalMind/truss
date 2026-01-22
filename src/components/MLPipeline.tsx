@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ArrowLeft } from 'lucide-react'; // CheckCircle kaldırıldı
+import { ArrowLeft } from 'lucide-react';
 import { apiService } from '../services/api';
 import { StepIndicator } from './StepIndicator';
 import { FileUpload } from './FileUpload';
@@ -51,7 +51,6 @@ export const MLPipeline: React.FC<MLPipelineProps> = ({
   const [analysisResults, setAnalysisResults] = useState<any>(null);
   const [missingValues, setMissingValues] = useState<Record<string, number>>({});
 
-  // TargetCorrelation kaldırıldı -> toplam adım sayısı 10
   const steps: MLStep[] = [
     { id: 1,  name: t('upload'),           completed: false, active: true  },
     { id: 2,  name: t('analyze'),          completed: false, active: false },
@@ -239,7 +238,7 @@ export const MLPipeline: React.FC<MLPipelineProps> = ({
       case 5:
         return <EncodingStep {...commonProps} />;
       case 6:
-        return <CorrelationStep {...commonProps} />; // TargetCorrelation kaldırıldı
+        return <CorrelationStep {...commonProps} />;
       case 7:
         return <ScalingStep {...commonProps} />;
       case 8:
