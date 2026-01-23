@@ -22,7 +22,10 @@ export class ApiClient {
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
     try {
-      const response = await fetch(`${this.baseUrl}${endpoint}`, {
+      const fullUrl = `${this.baseUrl}${endpoint}`;
+      console.log('[API Request]', options.method, fullUrl, options.body);
+      
+      const response = await fetch(fullUrl, {
         ...options,
         signal: controller.signal,
         headers: {
@@ -32,6 +35,7 @@ export class ApiClient {
       });
 
       clearTimeout(timeoutId);
+      console.log('[API Response]', response.status, response.statusText);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
@@ -46,11 +50,13 @@ export class ApiClient {
       clearTimeout(timeoutId);
 
       if (error.name === 'AbortError') {
+        console.error('[API Error] Request timeout');
         return { error: 'Request timeout' };
       }
 
+      console.error('[API Error]', error.name, error.message);
       return {
-        error: error.message || 'Network error occurred',
+        error: `${error.name}: ${error.message}` || 'Network error occurred',
       };
     }
   }
