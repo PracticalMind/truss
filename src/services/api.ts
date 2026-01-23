@@ -1,7 +1,6 @@
 import { apiClient, ApiResponse } from '../utils/apiClient';
 import { parseCSV } from '../utils/csvParser';
 import { API_ENDPOINTS, buildUrl } from '../config/api';
-import { getErrorMessage } from '../utils/translations';
 
 const USE_BACKEND = import.meta.env.VITE_USE_BACKEND === 'true';
 
@@ -196,6 +195,9 @@ class ApiService {
     }
 
     try {
+      if (!this.sessionData) {
+        return { error: 'No session data available' };
+      }
       const { method, columns: targetCols } = params;
       const { data, columns } = this.sessionData;
 
@@ -254,84 +256,121 @@ class ApiService {
     }
 
     try {
+      if (!this.sessionData) {
+        return { error: 'No session data available' };
+      }
       return { data: this.sessionData };
     } catch (error: any) {
       return { error: error.message || 'Failed to handle outliers' };
     }
   }
 
-  async encodeFeatures(payload: any): Promise<ApiResponse> {
+  async detectOutliers(params: { method: string; columns?: string[] }): Promise<ApiResponse> {
     if (USE_BACKEND) {
-      try {
+      return apiClient.post(API_ENDPOINTS.PREPROCESSING.OUTLIERS, params);
+    }
 
-        let method: string | null = null;
-        let columns: string[] = [];
-
-        if (Array.isArray(payload?.column_specific_settings)) {
-          const settings = payload.column_specific_settings as Array<{
-            column: string;
-            strategy: string;
-            ordinal?: boolean;
-          }>;
-
-          const strategies = Array.from(
-            new Set(settings.map((s) => s.strategy))
-          );
-
-          if (strategies.length > 1) {
-            return {
-              error:
-                'Backend currently supports only one encoding method per request. Please use a single strategy for all selected columns.',
-            };
-          }
-
-          const s = strategies[0];
-
-          if (!['label', 'onehot', 'ordinal'].includes(s)) {
-            return {
-              error:
-                'Current backend implementation only supports label / onehot / ordinal encoding.',
-            };
-          }
-
-          method = s;
-          columns = settings.map((s) => s.column);
-        }
-        else if (payload?.default_strategy) {
-          const s = payload.default_strategy as string;
-
-          if (!['label', 'onehot', 'ordinal'].includes(s)) {
-            return {
-              error:
-                'Current backend implementation only supports label / onehot / ordinal encoding for default strategy.',
-            };
-          }
-
-          method = s;
-
-          if (this.sessionData?.columns) {
-            columns = this.sessionData.columns;
-          } else {
-            return { error: 'No session data available for encoding.' };
-          }
-        }
-
-        if (!method || !columns.length) {
-          return {
-            error: 'No columns or method resolved for encoding.',
-          };
-        }
-
-        const resp = await apiClient.post(
-          API_ENDPOINTS.PREPROCESSING.ENCODING,
-          { method, columns }
-        );
-        return resp;
-      } catch (error: any) {
-        return {
-          error: error.message || 'Encoding failed',
-        };
+    try {
+      if (!this.sessionData) {
+        return { error: 'No session data available' };
       }
+      const { method, columns: targetCols } = params;
+      const { data, columns } = this.sessionData;
+      const outlierResults: Record<string, { count: number; indices: number[] }> = {};
+
+      const colsToCheck = targetCols || columns;
+
+      for (const colName of colsToCheck) {
+        const colIdx = columns.indexOf(colName);
+        if (colIdx === -1) continue;
+
+        const colData = data.map((row: any[]) => row[colIdx]).filter((v: any) => typeof v === 'number');
+        let outlierIndices: number[] = [];
+
+        if (method === 'iqr') {
+          const sorted = [...colData].sort((a: any, b: any) => a - b);
+          const q1 = sorted[Math.floor(sorted.length * 0.25)];
+          const q3 = sorted[Math.floor(sorted.length * 0.75)];
+          const iqr = q3 - q1;
+          const lowerBound = q1 - 1.5 * iqr;
+          const upperBound = q3 + 1.5 * iqr;
+          outlierIndices = (data as any[])
+            .map((row: any, idx: number) => (typeof row[colIdx] === 'number' && (row[colIdx] < lowerBound || row[colIdx] > upperBound)) ? idx : -1)
+            .filter((idx: number) => idx !== -1);
+        } else if (method === 'zscore') {
+          const numericVals = data.map((r: any[]) => r[colIdx]).filter((v: any) => typeof v === 'number') as number[];
+          const mean = numericVals.reduce((a: number, b: number) => a + b, 0) / numericVals.length;
+          const variance = numericVals.reduce((a: number, v: number) => a + Math.pow(v - mean, 2), 0) / numericVals.length;
+          const std = Math.sqrt(variance);
+          outlierIndices = (data as any[])
+            .map((row: any, idx: number) => (typeof row[colIdx] === 'number' && Math.abs((row[colIdx] - mean) / std) > 3) ? idx : -1)
+            .filter((idx: number) => idx !== -1);
+        }
+
+        outlierResults[colName] = { count: outlierIndices.length, indices: outlierIndices };
+      }
+
+      return { data: { outlier_results: outlierResults } };
+    } catch (error: any) {
+      return { error: error.message || 'Outlier detection failed' };
+    }
+  }
+
+  async removeOutliers(params: { method: string; columns?: string[] }): Promise<ApiResponse> {
+    if (USE_BACKEND) {
+      return apiClient.post(API_ENDPOINTS.PREPROCESSING.OUTLIERS, params);
+    }
+
+    try {
+      if (!this.sessionData) {
+        return { error: 'No session data available' };
+      }
+      const { method, columns: targetCols } = params;
+      let newData = [...this.sessionData.data];
+      const { columns } = this.sessionData;
+
+      const colsToCheck = targetCols || columns;
+      const rowsToRemove = new Set<number>();
+
+      for (const colName of colsToCheck) {
+        const colIdx = columns.indexOf(colName);
+        if (colIdx === -1) continue;
+
+        const colData = newData.map((row: any[]) => row[colIdx]).filter((v: any) => typeof v === 'number');
+
+        if (method === 'iqr') {
+          const sorted = [...colData].sort((a, b) => a - b);
+          const q1 = sorted[Math.floor(sorted.length * 0.25)];
+          const q3 = sorted[Math.floor(sorted.length * 0.75)];
+          const iqr = q3 - q1;
+          const lowerBound = q1 - 1.5 * iqr;
+          const upperBound = q3 + 1.5 * iqr;
+
+          newData.forEach((row, idx) => {
+            if (typeof row[colIdx] === 'number' && (row[colIdx] < lowerBound || row[colIdx] > upperBound)) {
+              rowsToRemove.add(idx);
+            }
+          });
+        }
+      }
+
+      newData = newData.filter((_, idx) => !rowsToRemove.has(idx));
+
+      this.sessionData = {
+        ...this.sessionData,
+        data: newData,
+        shape: [newData.length, columns.length] as [number, number]
+      };
+
+      return { data: this.sessionData };
+    } catch (error: any) {
+      return { error: error.message || 'Outlier removal failed' };
+    }
+  }
+
+  async encodeFeatures(params: { method: string; columns: string[] }): Promise<ApiResponse> {
+    if (USE_BACKEND) {
+      return apiClient.post(API_ENDPOINTS.PREPROCESSING.ENCODING, params);
     }
 
     try {
@@ -368,6 +407,10 @@ class ApiService {
     }
   }
 
+  async scaleFeatures(params: any): Promise<ApiResponse> {
+    return this.scaleData(params);
+  }
+
   async trainModel(params: { model_type: string; target_column: string; test_size: number }): Promise<ApiResponse> {
     if (USE_BACKEND) {
       return apiClient.post(API_ENDPOINTS.MODEL.TRAIN, params);
@@ -379,6 +422,38 @@ class ApiService {
           success: true,
           model_type: params.model_type,
           target_column: params.target_column,
+        }
+      };
+    } catch (error: any) {
+      return { error: error.message || 'Training failed' };
+    }
+  }
+
+  async trainModels(params: {
+    model_type?: string;
+    model_names?: string[];
+    target_column: string;
+    test_size?: number;
+    problem_type?: string;
+  }): Promise<ApiResponse> {
+    if (USE_BACKEND) {
+      // Backend accepts TrainRequest: model_type, target_column, test_size
+      // If model_names provided, train first one; otherwise use model_type
+      const modelType = params.model_type || params.model_names?.[0] || 'random_forest';
+      return apiClient.post(API_ENDPOINTS.MODEL.TRAIN, {
+        model_type: modelType,
+        target_column: params.target_column,
+        test_size: params.test_size || 0.2,
+      });
+    }
+
+    try {
+      return {
+        data: {
+          success: true,
+          trained_models: params.model_names || [params.model_type || 'model'],
+          target_column: params.target_column,
+          problem_type: params.problem_type || 'classification',
         }
       };
     } catch (error: any) {
@@ -560,22 +635,25 @@ class ApiService {
     }
 
     try {
+      if (!this.sessionData) {
+        return { error: 'No session data available' };
+      }
       const { data, columns } = this.sessionData;
-      const numericColumns = columns.filter((col: string, idx: number) => {
+      const numericColumns = columns.filter((_col: string, idx: number) => {
         const values = data.map((row: any[]) => row[idx]);
         return values.some((v: any) => typeof v === 'number');
       });
 
       const matrix: Record<string, Record<string, number>> = {};
 
-      numericColumns.forEach((col1: string, idx1: number) => {
-        matrix[col1] = {};
-        numericColumns.forEach((col2: string, idx2: number) => {
-          const values1 = data.map((row: any[]) => row[columns.indexOf(col1)]).filter((v: any) => typeof v === 'number');
-          const values2 = data.map((row: any[]) => row[columns.indexOf(col2)]).filter((v: any) => typeof v === 'number');
+      numericColumns.forEach((_col1: string, _idx1: number) => {
+        matrix[_col1] = {};
+        numericColumns.forEach((_col2: string, _idx2: number) => {
+          const values1 = data.map((row: any[]) => row[columns.indexOf(_col1)]).filter((v: any) => typeof v === 'number');
+          const values2 = data.map((row: any[]) => row[columns.indexOf(_col2)]).filter((v: any) => typeof v === 'number');
 
-          if (col1 === col2) {
-            matrix[col1][col2] = 1;
+          if (_col1 === _col2) {
+            matrix[_col1][_col2] = 1;
           } else {
             const mean1 = values1.reduce((a: number, b: number) => a + b, 0) / values1.length;
             const mean2 = values2.reduce((a: number, b: number) => a + b, 0) / values2.length;
@@ -588,7 +666,7 @@ class ApiService {
             const std2 = Math.sqrt(values2.reduce((sum: number, v: number) =>
               sum + Math.pow(v - mean2, 2), 0) / values2.length);
 
-            matrix[col1][col2] = covariance / (std1 * std2);
+            matrix[_col1][_col2] = covariance / (std1 * std2);
           }
         });
       });

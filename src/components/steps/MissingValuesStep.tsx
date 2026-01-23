@@ -22,8 +22,6 @@ interface MissingValuesStepProps {
   processedData: ProcessedData | null;
   onDataUpdate: (data: ProcessedData) => void;
   onStepComplete: (stepId: number, result?: any) => void;
-  stepResults: Record<number, any>;
-  sessionId: string | null;
 }
 
 interface ColumnSpecificSetting {
@@ -35,9 +33,7 @@ interface ColumnSpecificSetting {
 export const MissingValuesStep: React.FC<MissingValuesStepProps> = ({
   processedData,
   onDataUpdate,
-  onStepComplete,
-  stepResults,
-  sessionId
+  onStepComplete
 }) => {
   const { t } = useLanguage();
 
@@ -56,7 +52,7 @@ export const MissingValuesStep: React.FC<MissingValuesStepProps> = ({
   const ensureSnapshot = async () => {
     if (hasSnapRef.current) return;
     try {
-      await apiService.snapshotStep({ stepId: 3 });
+      await apiService.snapshotStep({ step_id: 3 });
       hasSnapRef.current = true;
     } catch {
       // ignore
@@ -132,12 +128,19 @@ export const MissingValuesStep: React.FC<MissingValuesStepProps> = ({
     setIsProcessingGlobal(true);
     try {
       await ensureSnapshot();
+      
+      // Backend'e strategy'yi "method" olarak gönder
+      // Numeric için strategy, categorical için catStrategy'yi seç
+      let methodToUse = strategy;
+      if (strategy === 'ffill' || strategy === 'bfill') {
+        methodToUse = 'mean'; // Backend fallback
+      }
+      
       const response = await apiService.handleMissingValues({
-        strategy,
-        cat_strategy: catStrategy,
-        fill_value: fillValue,
-        drop_strategy: dropStrategy
+        method: methodToUse,
+        columns: undefined // undefined = all columns
       });
+      
       if (response.error) {
         toast.error(response.error);
         return;
@@ -152,7 +155,7 @@ export const MissingValuesStep: React.FC<MissingValuesStepProps> = ({
         };
         onDataUpdate(updated);
         setMissingInfo(response.data.missing_values);
-        toast.success(response.data.message);
+        toast.success('Global missing values handling applied');
       }
     } catch {
       toast.error('Failed to handle global missing values');
@@ -161,31 +164,43 @@ export const MissingValuesStep: React.FC<MissingValuesStepProps> = ({
     }
   };
 
-  // 3) COLUMN-SPECIFIC APPLY
+  // 3) COLUMN-SPECIFIC APPLY - loop per column
   const handleColumnSpecificApply = async () => {
     if (!processedData || columnSpecificSettings.length === 0) return;
     setIsProcessingColumn(true);
     try {
       await ensureSnapshot();
-      const response = await apiService.handleMissingValues({
-        column_specific_settings: columnSpecificSettings
-      });
-      if (response.error) {
-        toast.error(response.error);
-        return;
+      
+      // Her column için ayrı API çağrısı yap
+      for (const setting of columnSpecificSettings) {
+        const methodToUse = setting.strategy === 'ffill' || setting.strategy === 'bfill' 
+          ? 'mean' 
+          : setting.strategy;
+        
+        const response = await apiService.handleMissingValues({
+          method: methodToUse,
+          columns: [setting.column]
+        });
+        
+        if (response.error) {
+          toast.error(`Failed for column ${setting.column}: ${response.error}`);
+          continue;
+        }
+        
+        // Her çağrıdan sonra sessionData update et (UI için)
+        if (response.data) {
+          onDataUpdate({
+            data: response.data.data,
+            columns: response.data.columns,
+            shape: response.data.shape,
+            dtypes: processedData.dtypes || {},
+            missingValues: response.data.missing_values
+          });
+          setMissingInfo(response.data.missing_values);
+        }
       }
-      if (response.data) {
-        const updated: ProcessedData = {
-          data: response.data.data,
-          columns: response.data.columns,
-          shape: response.data.shape,
-          dtypes: processedData.dtypes || {},
-          missingValues: response.data.missing_values
-        };
-        onDataUpdate(updated);
-        setMissingInfo(response.data.missing_values);
-        toast.success(response.data.message);
-      }
+      
+      toast.success('Column-specific settings applied');
     } catch {
       toast.error('Failed to handle column-specific missing values');
     } finally {

@@ -11,8 +11,6 @@ interface CorrelationStepProps {
   processedData: ProcessedData | null;
   onDataUpdate: (data: ProcessedData) => void;
   onStepComplete: (stepId: number, result?: any) => void;
-  stepResults: Record<number, any>;
-  sessionId: string | null;
 }
 
 type Pair = { col1: string; col2: string; correlation: number };

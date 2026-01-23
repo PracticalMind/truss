@@ -164,7 +164,11 @@ export const MLPipeline: React.FC<MLPipelineProps> = ({
     const commonProps = {
       processedData,
       onDataUpdate: handleDataUpdate,
-      onStepComplete: handleStepComplete,
+      onStepComplete: handleStepComplete
+    };
+    
+    const commonPropsWithResults = {
+      ...commonProps,
       stepResults,
       sessionId
     };
@@ -242,11 +246,11 @@ export const MLPipeline: React.FC<MLPipelineProps> = ({
       case 7:
         return <ScalingStep {...commonProps} />;
       case 8:
-        return <TrainingStep {...commonProps} />;
+        return <TrainingStep {...commonPropsWithResults} />;
       case 9:
-        return <EvaluationStep {...commonProps} />;
+        return <EvaluationStep {...commonPropsWithResults} />;
       case 10:
-        return <OptimizationStep {...commonProps} />;
+        return <OptimizationStep {...commonPropsWithResults} />;
       default:
         return (
           <div className="text-center text-white">

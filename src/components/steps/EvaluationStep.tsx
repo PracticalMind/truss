@@ -2,16 +2,12 @@ import React, { useEffect, useMemo, useState } from 'react';
 import { motion } from 'framer-motion';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip as ReTooltip, ResponsiveContainer } from 'recharts';
 import { useLanguage } from '../../hooks/useLanguage';
-import { ProcessedData } from '../../services/localDataProcessor';
 import { apiService } from '../../services/api';
 import toast from 'react-hot-toast';
 
 interface EvaluationStepProps {
-  processedData: ProcessedData | null;
-  onDataUpdate: (data: ProcessedData) => void;
   onStepComplete: (stepId: number, result?: any) => void;
   stepResults: Record<number, any>;
-  sessionId: string | null;
 }
 
 type ChartItem = { model: string; score: number };
@@ -50,11 +46,8 @@ const InfoBubble: React.FC<{ text: string; className?: string }> = ({ text, clas
 const metricDescKey = (metricKey: string) => `metric_${metricKey}_desc`;
 
 export const EvaluationStep: React.FC<EvaluationStepProps> = ({
-  processedData,
-  onDataUpdate,
   onStepComplete,
-  stepResults,
-  sessionId
+  stepResults
 }) => {
   const { t } = useLanguage();
   const [evaluationResults, setEvaluationResults] = useState<any>(null);
@@ -162,7 +155,7 @@ export const EvaluationStep: React.FC<EvaluationStepProps> = ({
     return value < 0.1 ? 'text-green-400' : value < 0.3 ? 'text-yellow-400' : 'text-red-400';
   };
 
-  const formatMetricValue = (value: any, metric: string) => {
+  const formatMetricValue = (value: any) => {
     if (value == null || (typeof value === 'number' && !Number.isFinite(value))) return '—';
     if (typeof value !== 'number') return String(value);
     return value.toFixed(4);
@@ -440,7 +433,7 @@ print(y_new[:5])`;
                       return (
                         <div key={metricKey} className="text-center">
                           <div className={`text-lg font-bold ${color}`}>
-                            {formatMetricValue(value, metricKey)}
+                            {formatMetricValue(value)}
                           </div>
                           <div className="text-gray-400 text-sm capitalize flex items-center justify-center">
                             <span>{prettyName}</span>

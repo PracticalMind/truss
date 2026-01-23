@@ -2,7 +2,6 @@ import React, { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { motion } from 'framer-motion';
 import { Upload, FileText, X } from 'lucide-react';
-import { useLanguage } from '../hooks/useLanguage';
 
 interface FileUploadProps {
   onFileUpload: (file: File) => void;
@@ -11,7 +10,7 @@ interface FileUploadProps {
 }
 
 export const FileUpload: React.FC<FileUploadProps> = ({ onFileUpload, uploadedFile, onRemoveFile }) => {
-  const { t } = useLanguage();
+
 
   const onDrop = useCallback((acceptedFiles: File[]) => {
     if (acceptedFiles.length > 0) {

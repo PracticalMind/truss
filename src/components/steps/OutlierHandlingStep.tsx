@@ -32,8 +32,6 @@ interface Props {
   processedData: ProcessedData | null;
   onDataUpdate: (data: ProcessedData) => void;
   onStepComplete: (stepId: number, result?: any) => void;
-  stepResults: Record<number, any>;
-  sessionId: string | null;
 }
 
 export const OutlierHandlingStep: React.FC<Props> = ({
@@ -62,7 +60,7 @@ export const OutlierHandlingStep: React.FC<Props> = ({
   const ensureSnapshot = async () => {
     if (hasSnapRef.current) return;
     try {
-      await apiService.snapshotStep({ stepId: 4 });
+      await apiService.snapshotStep({ step_id: 4 });
       hasSnapRef.current = true;
     } catch {
       // ignore
@@ -112,23 +110,22 @@ export const OutlierHandlingStep: React.FC<Props> = ({
       setIsDetecting(true);
 
       try {
-        const resp = await apiService.detectOutliers(
-          {
-            method: detectMethod,
-            factor: detectFactor,
-            column_configs: Object.fromEntries(
-              columnDetectConfigs.map(c => [c.column, { method: c.method, factor: c.factor }])
-            )
-          },
-          { signal: controller.signal } as any
-        );
+        // Backend sadece method + columns kabul ediyor
+        const columnsToDetect = columnDetectConfigs.length > 0 
+          ? columnDetectConfigs.map((c: any) => c.column)
+          : undefined;
+
+        const resp = await apiService.detectOutliers({
+          method: detectMethod,
+          columns: columnsToDetect
+        });
 
         if (mySeq !== detectSeqRef.current) return;
 
         if (resp?.error) {
           toast.error(`Detect failed: ${resp.error}`);
         } else if (resp?.data) {
-          const o = (resp.data as any).outliers;
+          const o = (resp.data as any).outlier_results;
           setOutlierResults(o || {});
         }
       } catch (err: any) {
@@ -146,7 +143,7 @@ export const OutlierHandlingStep: React.FC<Props> = ({
         detectTimerRef.current = null;
       }
     };
-  }, [processedData, detectMethod, detectFactor, columnDetectConfigs]);
+  }, [processedData, detectMethod, columnDetectConfigs]);
 
   useEffect(() => {
     return () => {
@@ -165,18 +162,6 @@ export const OutlierHandlingStep: React.FC<Props> = ({
     outliers: r.count
   })).sort((a,b)=>b.outliers-a.outliers);
 
-  const addColumnDetect = () => {
-    const avail = (processedData?.columns || []).filter(c =>
-      !columnDetectConfigs.some(x => x.column === c) && isProbablyNumeric(c)
-    );
-    if (avail.length) {
-      setColumnDetectConfigs(prev => [
-        ...prev, { column: avail[0], method: detectMethod, factor: detectFactor }
-      ]);
-    } else {
-      toast.error('No available numeric columns to add.');
-    }
-  };
   const removeColumnDetect = (i: number) =>
     setColumnDetectConfigs(prev => prev.filter((_, idx) => idx !== i));
   const updateColumnDetect = (i: number, field: 'method'|'factor', value: any) =>
@@ -223,8 +208,10 @@ export const OutlierHandlingStep: React.FC<Props> = ({
     setIsRemovingGlobal(true);
     try {
       await ensureSnapshot();
-      const payload: any = { strategy, method: globalMethod, factor: globalFactor };
-      const resp = await apiService.removeOutliers(payload);
+      const resp = await apiService.removeOutliers({
+        method: globalMethod,
+        columns: undefined // all numeric columns
+      });
       if (resp.error) {
         toast.error(`Remove failed: ${resp.error}`);
       } else if (resp.data) {
@@ -235,7 +222,7 @@ export const OutlierHandlingStep: React.FC<Props> = ({
           shape: d.shape,
           dtypes: processedData.dtypes
         });
-        toast.success(d.message || 'Global outlier handling applied');
+        toast.success('Global outlier handling applied');
       }
     } catch {
       toast.error('Remove failed');
@@ -249,28 +236,32 @@ export const OutlierHandlingStep: React.FC<Props> = ({
     setIsRemovingColumn(true);
     try {
       await ensureSnapshot();
-      const payload: any = {
-        column_configs: Object.fromEntries(
-          columnRemoveConfigs.map(c => [c.column, {
-            strategy: c.strategy,
-            method: c.method,
-            factor: c.factor
-          }])
-        )
-      };
-      const resp = await apiService.removeOutliers(payload);
-      if (resp.error) {
-        toast.error(`Remove failed: ${resp.error}`);
-      } else if (resp.data) {
-        const d = resp.data as any;
-        onDataUpdate({
-          data: d.data,
-          columns: d.columns,
-          shape: d.shape,
-          dtypes: processedData.dtypes
+      
+      // Her column için ayrı API çağrısı yap
+      for (const col of columnRemoveConfigs) {
+        const resp = await apiService.removeOutliers({
+          method: col.method,
+          columns: [col.column]
         });
-        toast.success(d.message || 'Column-specific handling applied');
+        
+        if (resp.error) {
+          toast.error(`Remove failed for ${col.column}: ${resp.error}`);
+          continue;
+        }
+        
+        // Her çağrıdan sonra update et
+        if (resp.data) {
+          const d = resp.data as any;
+          onDataUpdate({
+            data: d.data,
+            columns: d.columns,
+            shape: d.shape,
+            dtypes: processedData.dtypes
+          });
+        }
       }
+      
+      toast.success('Column-specific outlier handling applied');
     } catch {
       toast.error('Remove failed');
     } finally {

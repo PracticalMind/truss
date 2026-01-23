@@ -17,9 +17,7 @@ interface TrainingStepProps {
 export const TrainingStep: React.FC<TrainingStepProps> = ({
   processedData,
   onDataUpdate,
-  onStepComplete,
-  stepResults,
-  sessionId
+  onStepComplete
 }) => {
   const { t } = useLanguage();
 
@@ -119,42 +117,56 @@ export const TrainingStep: React.FC<TrainingStepProps> = ({
 
   const handleTrain = async () => {
     if (!processedData) return;
+    if (problemType !== 'clustering' && !targetColumn) {
+      toast.error('Please select a target column');
+      return;
+    }
 
     setIsTraining(true);
+    const trainedModels: string[] = [];
+    
     try {
-      const response = await apiService.trainModels({
-        model_names: selectedModels,
-        target_column: targetColumn,
-        problem_type: problemType,
-        validation_method: problemType === 'clustering' ? undefined : validationMethod,
-        test_size: problemType === 'clustering' ? undefined : testSize,
-        cv_folds: problemType === 'clustering' ? undefined : cvFolds
-      });
+      // Her model için ayrı training çağrısı yap
+      for (const model of selectedModels) {
+        const response = await apiService.trainModels({
+          model_type: model,
+          target_column: targetColumn || '',
+          test_size: testSize,
+          problem_type: problemType
+        });
 
-      if (response.error) {
-        toast.error(response.error);
+        if (response.error) {
+          toast.error(`Training failed for ${model}: ${response.error}`);
+          continue;
+        }
+
+        if (response.data) {
+          trainedModels.push(model);
+        }
+      }
+
+      if (trainedModels.length === 0) {
+        toast.error('No models were trained successfully');
         return;
       }
 
-      if (response.data) {
-        toast.success(response.data.message || t('trainingSuccess'));
+      toast.success(`Successfully trained ${trainedModels.length} model(s)`);
 
-        const trainingResults = {
-          problemType: response.data.problem_type ?? problemType,
-          targetColumn,
-          selectedModels: response.data.trained_models ?? selectedModels,
-          validationMethod: response.data.validation_method ?? validationMethod,
-          testSize,
-          cvFolds,
-          dataShape: response.data.dataset_shape,
-          trainingCompleted: true
-        };
+      const trainingResults = {
+        problemType,
+        targetColumn,
+        selectedModels: trainedModels,
+        validationMethod,
+        testSize,
+        cvFolds,
+        dataShape: processedData.shape,
+        trainingCompleted: true
+      };
 
-        onStepComplete(STEP_ID, trainingResults);
-      }
+      onStepComplete(STEP_ID, trainingResults);
     } catch (error) {
       console.error('Training error:', error);
-      toast.error(t('failedToTrainModels'));
+      toast.error('Failed to train models');
     } finally {
       setIsTraining(false);
     }

@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import { useLanguage } from '../../hooks/useLanguage';
 import { apiService } from '../../services/api';
 import toast from 'react-hot-toast';
 
@@ -40,7 +39,6 @@ export const OptimizationStep: React.FC<OptimizationStepProps> = ({
   onStepComplete,
   stepResults
 }) => {
-  const { t } = useLanguage();
 
   const trainingLike = useMemo(() => {
     const vals = Object.values(stepResults || {});
@@ -193,24 +191,6 @@ export const OptimizationStep: React.FC<OptimizationStepProps> = ({
     return isPercentMetric ? `${(v * 100).toFixed(2)}%` : v.toFixed(4);
   };
 
-  const baselineScore: number | null = useMemo(() => {
-    if (!evaluationLike?.results || !selectedModel) return null;
-    const match = evaluationLike.results.find((r: any) => r?.model === selectedModel);
-    if (!match || !match.metrics) return null;
-    return safeNumber(match.metrics[metricKey]);
-  }, [evaluationLike, selectedModel, metricKey]);
-
-  const currentOpt = optResults[selectedModel] || null;
-  const shownBestScore = currentOpt?.bestScore ?? null;
-  const shownBestParams = currentOpt?.bestParams ?? null;
-
-  const improvementPercent: number | null = useMemo(() => {
-    if (baselineScore == null || shownBestScore == null) return null;
-    if (baselineScore === 0) return null;
-    const delta = shownBestScore - baselineScore;
-    return (delta / Math.abs(baselineScore)) * 100;
-  }, [baselineScore, shownBestScore]);
-
   const noModels = candidateModels.length === 0;
 
   const usageSnippet = (fmt: 'joblib' | 'pkl' | 'onnx', filename: string) => {
@@ -251,7 +231,7 @@ print(pred[:5])`;
     }
     setIsExporting(true);
     try {
-      const res = await apiService.exportModelFile({
+      const res = await apiService.exportModel({
         selected_model: selectedModel,
         model_name: selectedModel,
         format: exportFormat

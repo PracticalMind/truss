@@ -12,8 +12,6 @@ interface ScalingStepProps {
   processedData: ProcessedData | null;
   onDataUpdate: (data: ProcessedData) => void;
   onStepComplete: (stepId: number, result?: any) => void;
-  stepResults: Record<number, any>;
-  sessionId: string | null;
 }
 
 interface ColumnSpecificScalingSetting {
@@ -40,7 +38,7 @@ export const ScalingStep: React.FC<ScalingStepProps> = ({
   const ensureSnapshot = async () => {
     if (hasSnapRef.current) return;
     try {
-      await apiService.snapshotStep({ stepId: STEP_ID });
+      await apiService.snapshotStep({ step_id: STEP_ID });
       hasSnapRef.current = true;
     } catch {
       // ignore

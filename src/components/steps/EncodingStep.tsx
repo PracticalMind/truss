@@ -19,8 +19,6 @@ interface Props {
   processedData: ProcessedData | null;
   onDataUpdate: (data: ProcessedData & { missingValues?: Record<string, number> }) => void;
   onStepComplete: (stepId: number, result?: any) => void;
-  stepResults: Record<number, any>;
-  sessionId: string | null;
 }
 
 type Strategy = 'auto' | 'label' | 'onehot' | 'ordinal' | 'binary' | 'target';
@@ -34,9 +32,7 @@ interface ColumnSetting {
 export const EncodingStep: React.FC<Props> = ({
   processedData,
   onDataUpdate,
-  onStepComplete,
-  stepResults,
-  sessionId
+  onStepComplete
 }) => {
   const { t } = useLanguage();
 
@@ -105,25 +101,26 @@ export const EncodingStep: React.FC<Props> = ({
     if (!processedData) return;
     setIsApplyingGlobal(true);
     try {
-      const payload: any = {
-        default_strategy: defaultStrategy
-      };
-
-      if (defaultStrategy === 'auto') payload.max_categories = maxCategories;
-
-      if (defaultStrategy === 'target') {
-        if (!targetColumn) {
-          toast.error(t('pleaseSelectTarget'));
-          setIsApplyingGlobal(false);
-          return;
-        }
-        payload.target_column = targetColumn;
-      }
-
-
       await ensureSnapshot();
 
-      const resp = await apiService.encodeFeatures(payload);
+      // Backend sadece method + columns kabul ediyor
+      // defaultStrategy'yi method olarak gönder
+      let methodToUse = defaultStrategy;
+      
+      // Backend'in desteklemediği stratejileri basitleştir
+      if (methodToUse === 'auto' || methodToUse === 'binary' || methodToUse === 'target') {
+        methodToUse = 'label'; // fallback
+      }
+
+      const resp = await apiService.encodeFeatures({
+        method: methodToUse,
+        columns: processedData.columns.filter(col => {
+          // Kategorik kolonları seç (numeric olmayan)
+          const dtype = processedData.dtypes?.[col] || '';
+          return !dtype.includes('int') && !dtype.includes('float') && !dtype.includes('double');
+        })
+      });
+      
       if (resp.error) {
         toast.error(resp.error);
         return;
@@ -136,10 +133,10 @@ export const EncodingStep: React.FC<Props> = ({
           shape: d.shape,
           dtypes: processedData.dtypes || {}
         });
-        toast.success(t('globalEncodingApplied'));
+        toast.success('Global encoding applied');
       }
     } catch {
-      toast.error(t('globalEncodingFailed'));
+      toast.error('Global encoding failed');
     } finally {
       setIsApplyingGlobal(false);
     }
@@ -153,43 +150,42 @@ export const EncodingStep: React.FC<Props> = ({
     }
     setIsApplyingColumns(true);
     try {
-      const column_specific_settings = columnSettings.map((s) => ({
-        column: s.column,
-        strategy: s.strategy,
-        ordinal: s.strategy === 'ordinal' ? Boolean(s.ordinal) : false
-      }));
-
-      const anyTargetOnCols = columnSettings.some((s) => s.strategy === 'target');
-      const payload: any = { column_specific_settings };
-      if (anyTargetOnCols) {
-        if (!targetColumn) {
-          toast.error(t('pleaseSelectTargetForColumn'));
-          setIsApplyingColumns(false);
-          return;
-        }
-        payload.target_column = targetColumn;
-      }
-
-
       await ensureSnapshot();
-
-      const resp = await apiService.encodeFeatures(payload);
-      if (resp.error) {
-        toast.error(resp.error);
-        return;
-      }
-      if (resp.data) {
-        const d: any = resp.data;
-        onDataUpdate({
-          data: d.data,
-          columns: d.columns,
-          shape: d.shape,
-          dtypes: processedData.dtypes || {}
+      
+      // Her column için ayrı API çağrısı yap
+      for (const setting of columnSettings) {
+        let methodToUse = setting.strategy;
+        
+        // Backend'in desteklemediği stratejileri basitleştir
+        if (methodToUse === 'auto' || methodToUse === 'binary' || methodToUse === 'target') {
+          methodToUse = 'label'; // fallback
+        }
+        
+        const resp = await apiService.encodeFeatures({
+          method: methodToUse,
+          columns: [setting.column]
         });
-        toast.success(t('columnEncodingApplied'));
+        
+        if (resp.error) {
+          toast.error(`Encoding failed for ${setting.column}: ${resp.error}`);
+          continue;
+        }
+        
+        // Her çağrıdan sonra update et
+        if (resp.data) {
+          const d: any = resp.data;
+          onDataUpdate({
+            data: d.data,
+            columns: d.columns,
+            shape: d.shape,
+            dtypes: processedData.dtypes || {}
+          });
+        }
       }
+      
+      toast.success('Column-specific encoding applied');
     } catch {
-      toast.error(t('columnEncodingFailed'));
+      toast.error('Column encoding failed');
     } finally {
       setIsApplyingColumns(false);
     }

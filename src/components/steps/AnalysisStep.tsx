@@ -31,8 +31,6 @@ interface AnalysisStepProps {
   processedData: ProcessedData | null;
   onDataUpdate: (data: ProcessedData) => void;
   onStepComplete: (stepId: number, result?: any) => void;
-  stepResults: Record<number, any>;
-  sessionId: string | null;
 }
 
 type Extras = {
@@ -101,7 +99,7 @@ const CollapsibleCard: React.FC<{
 export const AnalysisStep: React.FC<AnalysisStepProps> = ({
   processedData,
   onDataUpdate,
-  onStepComplete,
+  onStepComplete
 }) => {
   const { t } = useLanguage();
 
@@ -110,7 +108,7 @@ export const AnalysisStep: React.FC<AnalysisStepProps> = ({
 
   const [isQualityAssocOpen, setIsQualityAssocOpen] = useState(false);
 
-  const [insightTarget, setInsightTarget] = useState<string>('');
+  const insightTarget = '';
 
   const prevColsSig = useRef<string>('');
   const prevTarget = useRef<string>('');
@@ -872,7 +870,7 @@ export const AnalysisStep: React.FC<AnalysisStepProps> = ({
                   <YAxis stroke="#9ca3af" fontSize={12} />
                   <Tooltip 
                     contentStyle={{ backgroundColor: 'rgba(17, 24, 39, 0.95)', border: '1px solid #374151', borderRadius: '8px' }}
-                    formatter={(value: any, name: any, props: any) => [`${Number(value).toFixed(3)} (${props?.payload?.test})`, 'Association Score']} 
+                    formatter={(value: any, _name: any, props: any) => [`${Number(value).toFixed(3)} (${props?.payload?.test})`, 'Association Score']} 
                   />
                   <Bar dataKey="score" fill="url(#cyanGradient)" radius={[4, 4, 0, 0]} />
                   <defs>
