@@ -15,6 +15,7 @@ from ...schemas.session import (
 )
 from ...services.db import get_db
 from ...services.models import MLSessions, MLSessionSnapshots
+from ...utils.json_sanitize import sanitize_for_json
 
 router = APIRouter(prefix="/session", tags=["session"])
 
@@ -51,6 +52,8 @@ async def _sync_session_to_db(state, db: AsyncSession, filename: str | None = No
     "columns": columns,
     "shape": shape,
   }
+
+  current_data = sanitize_for_json(current_data)
 
   result = await db.execute(
     select(MLSessions).where(MLSessions.session_id == state.session_id)

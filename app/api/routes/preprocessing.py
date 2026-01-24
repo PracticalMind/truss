@@ -21,6 +21,7 @@ from ...schemas.preprocessing import (
 )
 from ...services.db import get_db
 from ...services.models import MLSessions
+from ...utils.json_sanitize import sanitize_for_json
 
 router = APIRouter(prefix="/preprocessing", tags=["preprocessing"])
 
@@ -37,6 +38,8 @@ async def _sync_session_to_db(state, db: AsyncSession) -> None:
     "columns": columns,
     "shape": shape,
   }
+
+  current_data = sanitize_for_json(current_data)
 
   result = await db.execute(
     select(MLSessions).where(MLSessions.session_id == state.session_id)
