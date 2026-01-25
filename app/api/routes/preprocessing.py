@@ -166,9 +166,13 @@ async def outliers(
   except KeyError:
     raise HTTPException(status_code=404, detail="No active session")
 
+  logger.info(f"Outliers request - method: {body.method}, columns: {body.columns}")
+
   try:
     df_new = handle_outliers(state.df, body.method, body.columns)
+    logger.info(f"Successfully handled outliers. Original shape: {state.df.shape}, New shape: {df_new.shape}")
   except Exception as e:
+    logger.error(f"Outliers handling failed: {str(e)}")
     raise HTTPException(status_code=400, detail=f"Outliers handling failed: {str(e)}")
   
   state = session_store.update_df(state.session_id, df_new)
@@ -187,14 +191,20 @@ async def encoding(
   except KeyError:
     raise HTTPException(status_code=404, detail="No active session")
 
-  if not body.columns or len(body.columns) == 0:
-    raise HTTPException(status_code=400, detail="At least one column must be specified for encoding")
+  # Validate that columns are provided when not using global settings
+  if body.columns is not None and len(body.columns) == 0:
+    raise HTTPException(status_code=400, detail="Columns array cannot be empty. Either provide specific columns or set to null for global settings.")
+
+  logger.info(f"Encoding request - method: {body.method}, columns: {body.columns}")
 
   try:
     df_new = encode_columns(state.df, body.method, body.columns)
+    logger.info(f"Successfully encoded columns. Original shape: {state.df.shape}, New shape: {df_new.shape}")
   except KeyError as e:
+    logger.error(f"Column not found: {str(e)}")
     raise HTTPException(status_code=400, detail=f"Column not found: {str(e)}")
   except Exception as e:
+    logger.error(f"Encoding failed: {str(e)}")
     raise HTTPException(status_code=400, detail=f"Encoding failed: {str(e)}")
   
   state = session_store.update_df(state.session_id, df_new)
@@ -213,9 +223,13 @@ async def scaling(
   except KeyError:
     raise HTTPException(status_code=404, detail="No active session")
 
+  logger.info(f"Scaling request - method: {body.method}, columns: {body.columns}")
+
   try:
     df_new = scale_columns(state.df, body.method, body.columns)
+    logger.info(f"Successfully scaled columns. Original shape: {state.df.shape}, New shape: {df_new.shape}")
   except Exception as e:
+    logger.error(f"Scaling failed: {str(e)}")
     raise HTTPException(status_code=400, detail=f"Scaling failed: {str(e)}")
   
   state = session_store.update_df(state.session_id, df_new)

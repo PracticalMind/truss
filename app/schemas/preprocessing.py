@@ -15,7 +15,7 @@ class OutliersRequest(BaseModel):
 
 class EncodingRequest(BaseModel):
   method: str  # "label" | "onehot" | "ordinal"
-  columns: List[str]
+  columns: Optional[List[str]] = None
 
 
 class ScalingRequest(BaseModel):

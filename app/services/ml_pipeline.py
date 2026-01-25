@@ -84,8 +84,12 @@ def analyze_dataframe(df: pd.DataFrame) -> List[Dict[str, Any]]:
 
 
 def handle_missing_values(df: pd.DataFrame, method: str, columns: List[str] | None) -> pd.DataFrame:
-  # If columns is None, process all columns; if empty list, process none
-  target_cols = list(df.columns) if columns is None else (columns if columns else [])
+  # If columns is None, process only columns with missing values (for efficiency)
+  # If columns is provided, process those specific columns
+  if columns is None:
+    target_cols = [col for col in df.columns if df[col].isna().any()]
+  else:
+    target_cols = columns if columns else []
   
   # If no columns to process, return original dataframe
   if not target_cols:
@@ -118,6 +122,7 @@ def handle_missing_values(df: pd.DataFrame, method: str, columns: List[str] | No
 
 def handle_outliers(df: pd.DataFrame, method: str, columns: List[str] | None) -> pd.DataFrame:
   if columns is None:
+    # For global settings, only process numeric columns
     target_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
   else:
     target_cols = columns if columns else []
@@ -152,20 +157,31 @@ def handle_outliers(df: pd.DataFrame, method: str, columns: List[str] | None) ->
   return df_new
 
 
-def encode_columns(df: pd.DataFrame, method: str, columns: List[str]) -> pd.DataFrame:
+def encode_columns(df: pd.DataFrame, method: str, columns: List[str] | None) -> pd.DataFrame:
   df_new = df.copy()
+  
+  # If columns is None, automatically select categorical columns
+  if columns is None:
+    target_cols = [c for c in df.columns if not pd.api.types.is_numeric_dtype(df[c])]
+  else:
+    target_cols = columns if columns else []
+  
+  if not target_cols:
+    return df_new
+  
   if method in {"label", "ordinal"}:
-    for col in columns:
+    for col in target_cols:
       df_new[col] = df_new[col].astype("category").cat.codes
     return df_new
   if method == "onehot":
-    return pd.get_dummies(df_new, columns=columns, drop_first=False)
+    return pd.get_dummies(df_new, columns=target_cols, drop_first=False)
   return df_new
 
 
 def scale_columns(df: pd.DataFrame, method: str, columns: List[str] | None) -> pd.DataFrame:
   df_new = df.copy()
   if columns is None:
+    # For global settings, only scale numeric columns
     target_cols = [c for c in df.columns if pd.api.types.is_numeric_dtype(df[c])]
   else:
     target_cols = columns if columns else []
