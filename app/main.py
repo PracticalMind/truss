@@ -11,7 +11,6 @@ setup_logging()
 def get_application() -> FastAPI:
   app = FastAPI(title=settings.PROJECT_NAME)
 
-  # CORS
   origins = settings.BACKEND_CORS_ORIGINS or ["*"]
   app.add_middleware(
     CORSMiddleware,
@@ -19,9 +18,9 @@ def get_application() -> FastAPI:
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
+    expose_headers=["*"],
   )
 
-  # Router'lar (prefix yok; path'ler direkt API_ENDPOINTS ile aynı)
   app.include_router(health.router)
   app.include_router(dataset.router)
   app.include_router(session.router)
