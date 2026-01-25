@@ -129,13 +129,14 @@ export const MissingValuesStep: React.FC<MissingValuesStepProps> = ({
     try {
       await ensureSnapshot();
 
-      let methodToUse = strategy;
+      let numMethodToUse = strategy;
       if (strategy === 'ffill' || strategy === 'bfill') {
-        methodToUse = 'mean';
+        numMethodToUse = 'mean';
       }
       
       const response = await apiService.handleMissingValues({
-        method: methodToUse,
+        numerical_method: numMethodToUse,
+        categorical_method: catStrategy,
         columns: null
       });
       
@@ -180,12 +181,13 @@ export const MissingValuesStep: React.FC<MissingValuesStepProps> = ({
       
 
       for (const setting of columnSpecificSettings) {
-        const methodToUse = setting.strategy === 'ffill' || setting.strategy === 'bfill' 
+        const numMethodToUse = setting.strategy === 'ffill' || setting.strategy === 'bfill' 
           ? 'mean' 
           : setting.strategy;
         
         const response = await apiService.handleMissingValues({
-          method: methodToUse,
+          numerical_method: numMethodToUse,
+          categorical_method: setting.strategy === 'mode' || setting.strategy === 'constant' ? setting.strategy : 'mode',
           columns: [setting.column]
         });
         

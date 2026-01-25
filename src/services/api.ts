@@ -225,12 +225,26 @@ class ApiService {
     }
   }
 
-  async handleMissingValues(params: { method: string; columns?: string[] | null }): Promise<ApiResponse> {
+  async handleMissingValues(params: { 
+    numerical_method?: string; 
+    categorical_method?: string; 
+    method?: string; 
+    columns?: string[] | null 
+  }): Promise<ApiResponse> {
     if (USE_BACKEND) {
-      const backendParams = {
-        method: params.method,
+      const backendParams: any = {
         columns: params.columns && params.columns.length > 0 ? params.columns : null
       };
+      
+      // Yeni format: numerical_method ve categorical_method
+      if (params.numerical_method !== undefined) {
+        backendParams.numerical_method = params.numerical_method;
+        backendParams.categorical_method = params.categorical_method || 'mode';
+      } else if (params.method !== undefined) {
+        // Eski format: method
+        backendParams.method = params.method;
+      }
+      
       console.log('Sending to backend:', backendParams);
       const response = await apiClient.post(API_ENDPOINTS.PREPROCESSING.MISSING_VALUES, backendParams);
       console.log('Backend response:', response);
@@ -241,10 +255,12 @@ class ApiService {
       if (!this.sessionData) {
         return { error: 'No session data available' };
       }
-      const { method, columns: paramCols } = params;
+      const { method, numerical_method, categorical_method, columns: paramCols } = params;
       const { data, columns } = this.sessionData;
       
       const targetCols = (paramCols && paramCols.length > 0) ? paramCols : undefined;
+      const numMethod = numerical_method || method;
+      const catMethod = categorical_method || method;
 
       const newData = data.map((row: any[]) => {
         return row.map((val: any, idx: number) => {
@@ -252,21 +268,28 @@ class ApiService {
           if (val !== null && val !== undefined) return val;
           if (targetCols && !targetCols.includes(col)) return val;
 
-          if (method === 'drop') {
+          // Sütun türünü belirle
+          const colDtype = this.sessionData.dtypes?.[col] || '';
+          const isNumeric = colDtype.includes('int') || colDtype.includes('float') || colDtype.includes('double');
+          
+          // Uygun methodu seç
+          const effectiveMethod = isNumeric ? numMethod : catMethod;
+
+          if (effectiveMethod === 'drop') {
             return val;
-          } else if (method === 'mean' || method === 'median') {
+          } else if (effectiveMethod === 'mean' || effectiveMethod === 'median') {
             const colValues = data.map((r: any[]) => r[idx]).filter((v: any) =>
               v !== null && typeof v === 'number'
             );
             if (colValues.length === 0) return 0;
 
-            if (method === 'mean') {
+            if (effectiveMethod === 'mean') {
               return colValues.reduce((a: number, b: number) => a + b, 0) / colValues.length;
             } else {
               const sorted = [...colValues].sort((a, b) => a - b);
               return sorted[Math.floor(sorted.length / 2)];
             }
-          } else if (method === 'mode') {
+          } else if (effectiveMethod === 'mode' || effectiveMethod === 'constant') {
             const colValues = data.map((r: any[]) => r[idx]).filter((v: any) => v !== null);
             const frequency = colValues.reduce((acc: any, v: any) => {
               acc[v] = (acc[v] || 0) + 1;
@@ -279,7 +302,7 @@ class ApiService {
         });
       });
 
-      const filteredData = method === 'drop'
+      const filteredData = (numMethod === 'drop' || catMethod === 'drop')
         ? newData.filter((row: any[]) => !row.some((v: any) => v === null))
         : newData;
 
