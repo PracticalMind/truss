@@ -109,12 +109,18 @@ export const MLPipeline: React.FC<MLPipelineProps> = ({
     setUploadedFile(file);
     setIsProcessing(true);
     try {
+      console.log('[MLPipeline] Starting file upload:', file.name);
       const res = await apiService.uploadDataset(file);
+      
       if (res.error) {
-        toast.error(res.error);
+        console.error('[MLPipeline] Upload error:', res.error);
+        toast.error(`Upload failed: ${res.error}`);
+        setUploadedFile(null);
         return;
       }
+      
       if (res.data) {
+        console.log('[MLPipeline] Upload successful, processing data...');
         setColumns(res.data.columns);
         setCurrentData(res.data.data);
         setMissingValues(res.data.missing_values);
@@ -124,9 +130,15 @@ export const MLPipeline: React.FC<MLPipelineProps> = ({
         setCurrentStep(2);
         updateSteps(2);
         toast.success('File uploaded successfully!');
+      } else {
+        console.error('[MLPipeline] Invalid response format');
+        toast.error('Invalid response from server');
+        setUploadedFile(null);
       }
-    } catch {
-      toast.error('Failed to upload file');
+    } catch (error: any) {
+      console.error('[MLPipeline] Upload exception:', error);
+      toast.error(`Upload failed: ${error.message || 'Unknown error'}`);
+      setUploadedFile(null);
     } finally {
       setIsProcessing(false);
     }
@@ -201,6 +213,7 @@ export const MLPipeline: React.FC<MLPipelineProps> = ({
             <FileUpload
               onFileUpload={handleFileUpload}
               uploadedFile={uploadedFile}
+              isUploading={isProcessing}
               onRemoveFile={() => {
                 setUploadedFile(null);
                 setCurrentData([]);

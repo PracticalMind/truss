@@ -18,18 +18,22 @@ class ApiService {
 
   private async uploadDatasetToBackend(file: File): Promise<ApiResponse> {
     try {
+      console.log('[ApiService] Uploading to backend:', file.name);
       const response = await apiClient.uploadFile(API_ENDPOINTS.DATASET.UPLOAD, file);
 
       if (response.error) {
+        console.error('[ApiService] Upload error:', response.error);
         return { error: response.error };
       }
 
+      console.log('[ApiService] Upload successful, setting session data');
       this.sessionData = response.data;
       this.currentSessionId = (response.data as any)?.session_id || '';
       this.sessionHistory = [{ ...this.sessionData }];
 
       return { data: this.sessionData };
     } catch (error: any) {
+      console.error('[ApiService] Upload exception:', error);
       return { error: error.message || 'Failed to upload dataset' };
     }
   }
