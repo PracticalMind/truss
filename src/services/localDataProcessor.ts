@@ -4,6 +4,7 @@ export interface ProcessedData {
   shape: [number, number];
   dtypes?: Record<string, string>;
   missingValues?: Record<string, number>;
+  categorical_columns?: string[];
 }
 
 export class LocalDataProcessor {

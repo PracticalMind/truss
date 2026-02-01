@@ -110,7 +110,8 @@ export const EncodingStep: React.FC<Props> = ({
       columns: payload.columns,
       shape: payload.shape,
       dtypes: processedData?.dtypes || {},
-      missingValues: payload.missingValues
+      missingValues: payload.missingValues,
+      categorical_columns: processedData?.categorical_columns
     });
   };
 
@@ -165,7 +166,8 @@ export const EncodingStep: React.FC<Props> = ({
           data: d.data,
           columns: d.columns,
           shape: d.shape,
-          dtypes: processedData.dtypes || {}
+          dtypes: processedData.dtypes || {},
+          categorical_columns: d.categorical_columns || processedData.categorical_columns
         });
         toast.success('Global encoding applied');
       }
@@ -209,7 +211,8 @@ export const EncodingStep: React.FC<Props> = ({
             data: d.data,
             columns: d.columns,
             shape: d.shape,
-            dtypes: processedData.dtypes || {}
+            dtypes: processedData.dtypes || {},
+            categorical_columns: d.categorical_columns || processedData.categorical_columns
           });
         }
       }

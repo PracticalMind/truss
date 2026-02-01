@@ -26,6 +26,7 @@ interface ProcessedData {
   shape: [number, number];
   dtypes: Record<string, string>;
   missingValues?: Record<string, number>;
+  categorical_columns?: string[];
 }
 
 interface MLPipelineProps {
@@ -46,6 +47,7 @@ export const MLPipeline: React.FC<MLPipelineProps> = ({
   const [currentData, setCurrentData] = useState<any[][]>([]);
   const [columns, setColumns] = useState<string[]>([]);
   const [dtypes, setDtypes] = useState<Record<string, string>>({});
+  const [categoricalColumns, setCategoricalColumns] = useState<string[]>([]);
   const [isProcessing, setIsProcessing] = useState(false);
   const [stepResults, setStepResults] = useState<Record<number, any>>({});
   const [sessionId, setSessionId] = useState<string>('');
@@ -72,6 +74,7 @@ export const MLPipeline: React.FC<MLPipelineProps> = ({
       setCurrentData(initialSessionData.currentData || []);
       setColumns(initialSessionData.columns || []);
       setDtypes(initialSessionData.dtypes || {});
+      setCategoricalColumns(initialSessionData.categorical_columns || []);
       setAnalysisResults(initialSessionData.analysisResults || null);
       setStepResults(initialSessionData.stepResults || {});
       setUploadedFile(initialSessionData.uploadedFile || null);
@@ -87,6 +90,7 @@ export const MLPipeline: React.FC<MLPipelineProps> = ({
         currentData,
         columns,
         dtypes,
+        categorical_columns: categoricalColumns,
         analysisResults,
         stepResults,
         uploadedFile,
@@ -125,6 +129,7 @@ export const MLPipeline: React.FC<MLPipelineProps> = ({
         setCurrentData(res.data.data);
         setMissingValues(res.data.missing_values);
         setDtypes(res.data.dtypes || {});
+        setCategoricalColumns(res.data.categorical_columns || []);
         setSessionId(res.data.session_id);
         updateSteps(1, true);
         setCurrentStep(2);
@@ -161,6 +166,7 @@ export const MLPipeline: React.FC<MLPipelineProps> = ({
     if (newData.data) setCurrentData(newData.data);
     if (newData.missingValues) setMissingValues(newData.missingValues);
     if (newData.dtypes) setDtypes(newData.dtypes);
+    if (newData.categorical_columns) setCategoricalColumns(newData.categorical_columns);
   };
 
   const handleStepClick = (stepId: number) => {
@@ -175,8 +181,9 @@ export const MLPipeline: React.FC<MLPipelineProps> = ({
     columns,
     shape: [currentData.length, columns.length] as [number, number],
     dtypes,
-    missingValues
-  }), [currentData, columns, dtypes, missingValues]);
+    missingValues,
+    categorical_columns: categoricalColumns
+  }), [currentData, columns, dtypes, missingValues, categoricalColumns]);
 
   const renderStepContent = () => {
     const commonProps = {
