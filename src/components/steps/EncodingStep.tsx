@@ -65,11 +65,27 @@ export const EncodingStep: React.FC<Props> = ({
 
   // get only categorical columns (prefer backend list if available)
   const categoricalColumns = useMemo(() => {
+    console.log('[EncodingStep] processedData:', {
+      hasCategoricalColumns: !!processedData?.categorical_columns,
+      categorical_columns: processedData?.categorical_columns,
+      allColumns: allColumns,
+      dtypes: processedData?.dtypes
+    });
+    
+    // First try to use backend-provided categorical columns
     if (processedData?.categorical_columns && processedData.categorical_columns.length > 0) {
       console.debug('[EncodingStep] Using backend categorical_columns:', processedData.categorical_columns);
       return processedData.categorical_columns;
     }
-    return allColumns.filter(c => !isNumericColumn(c));
+    
+    console.warn('[EncodingStep] Backend categorical_columns not available, using fallback detection');
+    const detected = allColumns.filter(c => {
+      const isNum = isNumericColumn(c);
+      console.log(`[EncodingStep] Column "${c}" - isNumeric: ${isNum}`);
+      return !isNum;
+    });
+    console.log('[EncodingStep] Fallback detected categorical columns:', detected);
+    return detected;
   }, [allColumns, processedData?.dtypes, processedData?.categorical_columns]);
 
   const hasSnapRef = useRef(false);
