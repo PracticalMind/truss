@@ -28,12 +28,16 @@ def df_to_session_payload(state: SessionState) -> Dict[str, Any]:
   data = df.values.tolist()
   shape = (len(df), len(columns))
   missing_values = {col: int(df[col].isna().sum()) for col in columns}
+  
+  categorical_columns = [col for col in columns if not pd.api.types.is_numeric_dtype(df[col])]
+  
   return {
     "session_id": state.session_id,
     "data": data,
     "columns": columns,
     "shape": shape,
     "missing_values": missing_values,
+    "categorical_columns": categorical_columns,
   }
 
 
@@ -172,7 +176,10 @@ def encode_columns(df: pd.DataFrame, method: str, columns: List[str] | None) -> 
   if columns is None:
     target_cols = [c for c in df.columns if not pd.api.types.is_numeric_dtype(df[c])]
   else:
-    target_cols = columns if columns else []
+    target_cols = [
+      c for c in columns 
+      if c in df.columns and not pd.api.types.is_numeric_dtype(df[c])
+    ]
   
   if not target_cols:
     return df_new
