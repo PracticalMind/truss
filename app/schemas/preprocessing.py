@@ -13,6 +13,7 @@ class MissingValuesRequest(BaseModel):
 class OutliersRequest(BaseModel):
   method: str  # "iqr" | "zscore"
   columns: Optional[List[str]] = None
+  factor: Optional[float] = None  # IQR multiplier (default 1.5) or z-score threshold (default 3)
 
 
 class EncodingRequest(BaseModel):

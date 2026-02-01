@@ -117,7 +117,9 @@ async def detect_outliers(
     logger.warning("Empty columns array received in detect-outliers request")
     raise HTTPException(status_code=400, detail="Columns array cannot be empty. Either provide specific columns or set to null for global settings.")
 
-  logger.info(f"Detect outliers - method: {body.method}, requested columns: {body.columns}")
+  # Get factor parameter or use defaults
+  factor = body.factor if body.factor is not None else (1.5 if body.method == 'iqr' else 3.0)
+  logger.info(f"Detect outliers - method: {body.method}, factor: {factor}, requested columns: {body.columns}")
   logger.info(f"Available columns in DataFrame: {list(state.df.columns)}")
   
   if body.columns:
@@ -163,17 +165,17 @@ async def detect_outliers(
       q1 = df_col.quantile(0.25)
       q3 = df_col.quantile(0.75)
       iqr = q3 - q1
-      lower = q1 - 1.5 * iqr
-      upper = q3 + 1.5 * iqr
-      logger.info(f"IQR for '{col}': Q1={q1}, Q3={q3}, IQR={iqr}, bounds=[{lower}, {upper}]")
+      lower = q1 - factor * iqr
+      upper = q3 + factor * iqr
+      logger.info(f"IQR for '{col}': Q1={q1}, Q3={q3}, IQR={iqr}, factor={factor}, bounds=[{lower}, {upper}]")
       outliers_mask = (state.df[col] < lower) | (state.df[col] > upper)
     elif body.method == "zscore":
       mean = df_col.mean()
       std = df_col.std()
-      logger.info(f"Z-score for '{col}': mean={mean}, std={std}")
+      logger.info(f"Z-score for '{col}': mean={mean}, std={std}, threshold={factor}")
       if std > 0:
         z = (state.df[col] - mean) / std
-        outliers_mask = z.abs() > 3
+        outliers_mask = z.abs() > factor
     
     if outliers_mask is not None:
       outlier_count = int(outliers_mask.sum())
