@@ -142,7 +142,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                     </div>
                     <div className="flex-1 mx-4">
                       <div className="bg-[#1c2333] rounded px-3 py-1 text-[10px] text-white/30 font-mono text-center">
-                        truss.io/projects/proj-001/training
+                        truss.run/projects/proj-001/training
                       </div>
                     </div>
                   </div>

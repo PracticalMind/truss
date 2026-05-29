@@ -63,7 +63,7 @@ export default function SettingsPage() {
                 <label className="text-xs font-medium text-[#94a3b8] block mb-2">Email Address (Read-only)</label>
                 <input
                   type="email"
-                  value="alex@truss.io"
+                  value="alex@truss.run"
                   readOnly
                   className="w-full px-4 py-3 bg-[#111827] border border-[#1e2a3a] rounded-lg text-sm text-[#4a5568] cursor-not-allowed"
                 />
