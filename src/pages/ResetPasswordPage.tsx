@@ -117,7 +117,7 @@ export default function ResetPasswordPage({ onNavigate }: ResetPasswordPageProps
 
         {/* Footer */}
         <div className="mt-8 pt-6 border-t border-[#1e2a3a] text-center text-[10px] text-[#4a5568] uppercase tracking-widest">
-          © 2024 Truss Inc.
+          © 2026 Truss
         </div>
       </div>
     </div>

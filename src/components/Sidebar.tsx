@@ -171,7 +171,7 @@ export default function Sidebar({ currentPage, currentStep, onPageChange, onStep
           </div>
         </button>
         <div className="flex items-center justify-between mt-1 px-2">
-          <span className="text-[10px] text-[#4a5568]">v1.2.0</span>
+          <span className="text-[10px] text-[#4a5568]">v1.0.0</span>
           <div className="flex items-center gap-1">
             <button
               onClick={() => onPageChange('settings')}

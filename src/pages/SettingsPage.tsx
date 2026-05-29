@@ -98,7 +98,7 @@ export default function SettingsPage() {
                       <p className="text-lg font-bold text-white">Pro Plan</p>
                       <span className="px-2 py-0.5 text-[10px] font-semibold text-[#f97316] bg-[#f9731620] rounded uppercase">Active</span>
                     </div>
-                    <p className="text-sm text-[#64748b]">$49/month · Renews Dec 1, 2024</p>
+                    <p className="text-sm text-[#64748b]">$49/month · Renews Dec 1, 2026</p>
                   </div>
                   <button className="px-4 py-2 border border-[#2d3748] text-sm text-[#94a3b8] rounded hover:border-[#374151] hover:text-white transition-colors">
                     Manage

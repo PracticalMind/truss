@@ -435,7 +435,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                 ))}
               </div>
             </div>
-            <span className="text-white/40 text-xs font-semibold uppercase tracking-widest">Truss Inc.</span>
+            <span className="text-white/40 text-xs font-semibold uppercase tracking-widest">Truss</span>
             <span className="text-white/20 text-xs ml-2">© 2025. Build with precision.</span>
           </div>
           <div className="flex items-center gap-6">
