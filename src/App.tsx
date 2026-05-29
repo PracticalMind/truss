@@ -16,6 +16,7 @@ import EvaluationPage from './pages/EvaluationPage'
 import OptimizationPage from './pages/OptimizationPage'
 import SettingsPage from './pages/SettingsPage'
 import DashboardPage from './pages/DashboardPage'
+import ProjectsPage from './pages/ProjectsPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
@@ -42,6 +43,7 @@ export default function App() {
   const [currentStep, setCurrentStep] = useState<PipelineStep>('upload')
   const [authPage, setAuthPage] = useState<'landing' | 'login' | 'register' | 'reset'>('landing')
   const [activeProjectId, setActiveProjectId] = useState<string | null>(null)
+  const [showCreateProject, setShowCreateProject] = useState(false)
 
   if (loading) {
     return (
@@ -105,6 +107,8 @@ export default function App() {
           onPageChange={handlePageChange}
           onStepChange={handleStepChange}
           onOpenProject={handleOpenProject}
+          showCreateModal={showCreateProject}
+          onCloseCreateModal={() => setShowCreateProject(false)}
         />
       )
     }
@@ -112,19 +116,7 @@ export default function App() {
       return <SettingsPage />
     }
     if (currentPage === 'projects') {
-      return (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center">
-            <p className="text-[#64748b] text-sm">Projects view coming soon</p>
-            <button
-              onClick={() => handlePageChange('dashboard')}
-              className="mt-3 text-xs text-[#f97316] hover:underline"
-            >
-              Back to Dashboard
-            </button>
-          </div>
-        </div>
-      )
+      return <ProjectsPage onOpenProject={handleOpenProject} />
     }
     const projectId = activeProjectId ?? ''
     switch (currentStep) {
@@ -153,7 +145,7 @@ export default function App() {
         <TopBar
           title={getPageTitle()}
           badge={getPageBadge()}
-          onNewProject={() => { handlePageChange('dashboard') }}
+          onNewProject={() => { setCurrentPage('dashboard'); setShowCreateProject(true) }}
         />
         <main style={{ flex: 1, height: '100%', overflowY: 'auto', minWidth: 0 }}>
           {renderContent()}

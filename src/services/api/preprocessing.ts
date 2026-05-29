@@ -4,22 +4,26 @@ import type { DatasetInfo } from '../../types'
 interface MissingValuesConfig {
   numerical_method?: string
   categorical_method?: string
+  column_methods?: Record<string, string> | null
   columns?: string[] | null
 }
 
 interface OutliersConfig {
   method: string
+  action?: string
   columns?: string[] | null
   factor?: number | null
 }
 
 interface EncodingConfig {
   method: string
+  column_methods?: Record<string, string> | null
   columns?: string[] | null
 }
 
 interface ScalingConfig {
   method: string
+  column_methods?: Record<string, string> | null
   columns?: string[] | null
 }
 

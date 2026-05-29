@@ -1,9 +1,10 @@
 import { useState, useMemo } from 'react'
-import { useQuery, useMutation } from '@tanstack/react-query'
-import { ChevronRight, CheckCircle2 } from 'lucide-react'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
+import { ChevronRight, CheckCircle2, ChevronDown } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { datasetApi } from '../services/api/dataset'
 import { preprocessingApi } from '../services/api/preprocessing'
+import DataPreview from '../components/DataPreview'
 import type { PipelineStep } from '../types'
 
 interface ScalingPageProps {
@@ -19,9 +20,18 @@ const SCALERS: { type: ScalerType; label: string; description: string; bestFor: 
   { type: 'robust', label: 'Robust', description: 'Uses median and quartiles. Robust to extreme outliers.', bestFor: 'Noisy Data' },
 ]
 
+const SCALER_COLORS: Record<ScalerType, string> = {
+  standard: 'text-[#38bdf8] bg-[#38bdf818]',
+  minmax: 'text-[#34d399] bg-[#34d39918]',
+  robust: 'text-[#818cf8] bg-[#818cf818]',
+}
+
 export default function ScalingPage({ projectId, onNext }: ScalingPageProps) {
+  const qc = useQueryClient()
   const [selectedScaler, setSelectedScaler] = useState<ScalerType>('standard')
-  const [selectedCols, setSelectedCols] = useState<Set<string> | null>(null) // null = all
+  const [selectedCols, setSelectedCols] = useState<Set<string> | null>(null)
+  const [colScalers, setColScalers] = useState<Record<string, ScalerType>>({})
+  const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({})
 
   const { data: analyzeData, isLoading } = useQuery({
     queryKey: ['analyze', projectId],
@@ -37,7 +47,6 @@ export default function ScalingPage({ projectId, onNext }: ScalingPageProps) {
     [info, categoricalSet]
   )
 
-  // Initialize selectedCols when data loads
   const effectiveSelected = selectedCols ?? new Set(numericCols)
 
   const toggleCol = (col: string) => {
@@ -54,15 +63,26 @@ export default function ScalingPage({ projectId, onNext }: ScalingPageProps) {
     }
   }
 
+  function handleScalerCardClick(type: ScalerType) {
+    setSelectedScaler(type)
+    setColScalers({})
+  }
+
+  function toggleColDropdown(col: string) {
+    setOpenDropdowns(prev => ({ ...prev, [col]: !prev[col] }))
+  }
+
   const applyMutation = useMutation({
     mutationFn: () => {
       const cols = [...effectiveSelected]
       return preprocessingApi.scaling(projectId, {
         method: selectedScaler,
         columns: cols.length === numericCols.length ? null : cols,
+        column_methods: Object.keys(colScalers).length > 0 ? colScalers : undefined,
       })
     },
     onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['analyze', projectId] })
       toast.success('Scaling applied')
       onNext('training')
     },
@@ -73,14 +93,16 @@ export default function ScalingPage({ projectId, onNext }: ScalingPageProps) {
     const stat = analysis.find(a => a.column === col)
     if (!stat || stat.type !== 'numeric') return { min: '—', max: '—' }
     return {
-      min: stat.min?.toFixed(2) ?? '—',
-      max: stat.max?.toFixed(2) ?? '—',
+      min: stat.min?.toFixed(3) ?? '—',
+      max: stat.max?.toFixed(3) ?? '—',
     }
   }
 
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '64px' }}>
       <div className="p-6">
+        <DataPreview projectId={projectId} />
+
         {/* Info bar */}
         <div className="bg-[#111827] border border-[#1e2a3a] rounded-lg p-4 flex items-center justify-between mb-6">
           <div className="flex items-center gap-3">
@@ -92,7 +114,7 @@ export default function ScalingPage({ projectId, onNext }: ScalingPageProps) {
               </svg>
             </div>
             <div>
-              <p className="text-[10px] text-[#64748b] uppercase tracking-widest">Numeric Features Detected</p>
+              <p className="text-[10px] text-[#64748b] uppercase tracking-widest">Numeric Features</p>
               {isLoading
                 ? <div className="h-5 w-32 bg-[#1e2a3a] rounded animate-pulse mt-1" />
                 : <p className="text-lg font-bold text-white">{numericCols.length} Columns Identified</p>
@@ -100,14 +122,19 @@ export default function ScalingPage({ projectId, onNext }: ScalingPageProps) {
             </div>
           </div>
           <div className="text-right">
-            <p className="text-xs text-[#64748b]">Recommended: <span className="text-[#f97316] font-medium">StandardScaler</span></p>
+            <p className="text-xs text-[#64748b]">
+              Recommended: <span className="text-[#f97316] font-medium">StandardScaler</span>
+            </p>
+            {Object.keys(colScalers).length > 0 && (
+              <p className="text-[10px] text-[#64748b] mt-0.5">{Object.keys(colScalers).length} per-column override(s)</p>
+            )}
           </div>
         </div>
 
-        {/* Scaler cards */}
+        {/* Scaler cards (set global default) */}
         <div className="grid grid-cols-3 gap-3 mb-6">
           {SCALERS.map(scaler => (
-            <button key={scaler.type} onClick={() => setSelectedScaler(scaler.type)}
+            <button key={scaler.type} onClick={() => handleScalerCardClick(scaler.type)}
               className={`relative text-left p-4 rounded-lg border transition-all duration-150 ${selectedScaler === scaler.type ? 'border-[#f97316] bg-[#f9731610]' : 'border-[#1e2a3a] bg-[#111827] hover:border-[#2d3748]'}`}>
               {scaler.recommended && (
                 <span className="absolute top-3 right-3 text-[9px] px-1.5 py-0.5 bg-[#1e2a3a] text-[#94a3b8] rounded uppercase tracking-wide border border-[#2d3748]">Recommended</span>
@@ -127,19 +154,24 @@ export default function ScalingPage({ projectId, onNext }: ScalingPageProps) {
           ))}
         </div>
 
-        {/* Column table */}
+        {/* Column table with per-column scaler */}
         <div className="bg-[#111827] border border-[#1e2a3a] rounded-lg overflow-hidden">
           <div className="px-5 py-3 border-b border-[#1e2a3a] flex items-center justify-between">
-            <p className="text-xs font-semibold text-white">Column Selection &amp; Ranges</p>
+            <p className="text-xs font-semibold text-white">Column Selection &amp; Scaler</p>
             <div className="flex items-center gap-3">
               <span className="text-xs text-[#64748b]">{effectiveSelected.size} of {numericCols.length} selected</span>
               <button onClick={toggleAll} className="text-xs text-[#f97316] hover:underline">
                 {effectiveSelected.size === numericCols.length ? 'Deselect All' : 'Select All'}
               </button>
+              {Object.keys(colScalers).length > 0 && (
+                <button onClick={() => setColScalers({})} className="text-xs text-[#64748b] hover:text-[#94a3b8]">
+                  Reset overrides
+                </button>
+              )}
             </div>
           </div>
           <div className="overflow-x-auto">
-            <table className="w-full min-w-[560px] text-sm">
+            <table className="w-full min-w-[640px] text-sm">
               <thead>
                 <tr className="border-b border-[#1e2a3a] bg-[#0d1117]">
                   <th className="w-10 px-4 py-3">
@@ -147,29 +179,76 @@ export default function ScalingPage({ projectId, onNext }: ScalingPageProps) {
                       checked={effectiveSelected.size === numericCols.length && numericCols.length > 0}
                       onChange={toggleAll} className="w-3.5 h-3.5" />
                   </th>
-                  {['Feature Name', 'Min', 'Max'].map(h => (
+                  {['Feature Name', 'Min', 'Max', 'Scaler'].map(h => (
                     <th key={h} className="text-left px-3 py-3 text-[10px] font-semibold text-[#4a5568] uppercase tracking-widest">{h}</th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {isLoading && (
-                  <tr><td colSpan={4} className="px-5 py-8 text-center text-sm text-[#64748b]">Loading columns…</td></tr>
+                  <tr><td colSpan={5} className="px-5 py-8 text-center text-sm text-[#64748b]">Loading…</td></tr>
                 )}
                 {!isLoading && numericCols.length === 0 && (
-                  <tr><td colSpan={4} className="px-5 py-8 text-center text-sm text-[#64748b]">No numeric columns found. Run Encoding step first.</td></tr>
+                  <tr><td colSpan={5} className="px-5 py-8 text-center text-sm text-[#64748b]">No numeric columns found.</td></tr>
                 )}
                 {numericCols.map(col => {
                   const { min, max } = getColStats(col)
                   const selected = effectiveSelected.has(col)
+                  const colScaler: ScalerType = colScalers[col] ?? selectedScaler
+                  const isOverridden = colScalers[col] !== undefined
                   return (
-                    <tr key={col} className={`border-b border-[#1e2a3a] transition-colors ${selected ? 'hover:bg-[#0d1117]' : 'opacity-50'}`}>
+                    <tr key={col} className={`border-b border-[#1e2a3a] transition-colors ${selected ? 'hover:bg-[#0d1117]' : 'opacity-40'}`}>
                       <td className="px-4 py-3">
                         <input type="checkbox" checked={selected} onChange={() => toggleCol(col)} className="w-3.5 h-3.5" />
                       </td>
                       <td className="px-3 py-3 font-mono text-xs text-[#e2e8f0]">{col}</td>
                       <td className="px-3 py-3 text-xs font-mono text-[#64748b]">{min}</td>
                       <td className="px-3 py-3 text-xs font-mono text-[#64748b]">{max}</td>
+                      <td className="px-3 py-3">
+                        {selected ? (
+                          <div className="flex items-center gap-2">
+                            <div className="relative">
+                              <button
+                                onClick={() => toggleColDropdown(col)}
+                                className={`flex items-center gap-2 px-2.5 py-1.5 rounded text-xs border min-w-[90px] justify-between transition-colors ${
+                                  isOverridden
+                                    ? 'bg-[#f9731610] border-[#f97316]'
+                                    : 'bg-[#1c2333] border-[#2d3748] hover:border-[#374151]'
+                                }`}
+                              >
+                                <span className={`font-semibold ${SCALER_COLORS[colScaler]?.split(' ')[0]}`}>
+                                  {SCALERS.find(s => s.type === colScaler)?.label}
+                                </span>
+                                <ChevronDown size={10} className="text-[#64748b] flex-shrink-0" />
+                              </button>
+                              {openDropdowns[col] && (
+                                <div className="absolute top-full left-0 mt-1 w-36 bg-[#1c2333] border border-[#2d3748] rounded shadow-xl z-20">
+                                  {SCALERS.map(s => (
+                                    <button key={s.type}
+                                      onClick={() => {
+                                        setColScalers(prev => ({ ...prev, [col]: s.type }))
+                                        toggleColDropdown(col)
+                                      }}
+                                      className={`w-full text-left px-3 py-2 text-xs hover:bg-[#f9731618] hover:text-[#f97316] transition-colors ${colScaler === s.type ? 'text-[#f97316] bg-[#f9731610]' : 'text-[#94a3b8]'}`}>
+                                      {s.label}
+                                    </button>
+                                  ))}
+                                </div>
+                              )}
+                            </div>
+                            {isOverridden && (
+                              <button
+                                onClick={() => setColScalers(prev => { const n = { ...prev }; delete n[col]; return n })}
+                                className="text-[10px] text-[#4a5568] hover:text-[#94a3b8]"
+                              >
+                                reset
+                              </button>
+                            )}
+                          </div>
+                        ) : (
+                          <span className="text-[10px] text-[#374151]">—</span>
+                        )}
+                      </td>
                     </tr>
                   )
                 })}
@@ -181,9 +260,14 @@ export default function ScalingPage({ projectId, onNext }: ScalingPageProps) {
 
       <div className="fixed bottom-0 bg-[#111827] border-t border-white/[0.06] flex items-center justify-between px-6 z-10"
         style={{ left: '220px', right: 0, height: '56px' }}>
-        <span className="text-sm text-white/40">{effectiveSelected.size} columns · {SCALERS.find(s => s.type === selectedScaler)?.label} Scaler</span>
+        <span className="text-sm text-white/40">
+          {effectiveSelected.size} columns · {SCALERS.find(s => s.type === selectedScaler)?.label}
+          {Object.keys(colScalers).length > 0 && ` · ${Object.keys(colScalers).length} override(s)`}
+        </span>
         <div className="flex gap-3">
-          <button className="px-4 py-1.5 text-sm text-[#94a3b8] hover:text-white">Cancel</button>
+          <button onClick={() => onNext('training')} className="px-4 py-1.5 text-sm text-[#64748b] hover:text-white">
+            Skip Step
+          </button>
           <button onClick={() => applyMutation.mutate()} disabled={applyMutation.isPending || effectiveSelected.size === 0}
             className="flex items-center gap-2 px-5 py-1.5 bg-[#f97316] hover:bg-[#ea6c0a] disabled:opacity-50 text-white text-sm font-semibold rounded">
             {applyMutation.isPending ? 'Applying…' : 'Save & Continue'}

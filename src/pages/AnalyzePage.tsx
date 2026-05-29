@@ -1,6 +1,7 @@
 import { useQuery } from '@tanstack/react-query'
 import { ChevronRight } from 'lucide-react'
 import { datasetApi } from '../services/api/dataset'
+import DataPreview from '../components/DataPreview'
 import type { PipelineStep, ColumnAnalysis } from '../types'
 
 interface AnalyzePageProps {
@@ -39,6 +40,8 @@ export default function AnalyzePage({ projectId, onNext }: AnalyzePageProps) {
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '64px' }}>
       <div className="p-6">
+        <DataPreview projectId={projectId} />
+
         <div className="mb-6">
           <p className="text-sm text-[#64748b]">Automatic type inference and quality metrics for your dataset.</p>
         </div>

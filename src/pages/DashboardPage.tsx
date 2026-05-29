@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Activity, ArrowRight, Plus, X } from 'lucide-react'
+import { Activity, ArrowRight, X } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { projectsApi } from '../services/api/projects'
 import type { AppPage, PipelineStep, Project } from '../types'
@@ -9,6 +9,8 @@ interface DashboardPageProps {
   onPageChange: (page: AppPage) => void
   onStepChange: (step: PipelineStep) => void
   onOpenProject: (id: string, step: PipelineStep) => void
+  showCreateModal?: boolean
+  onCloseCreateModal?: () => void
 }
 
 const STATUS_STYLES: Record<string, { dot: string; text: string; bg: string; label: string }> = {
@@ -26,10 +28,12 @@ function timeAgo(dateStr: string): string {
   return `${Math.floor(h / 24)}d ago`
 }
 
-export default function DashboardPage({ onOpenProject }: DashboardPageProps) {
+export default function DashboardPage({ onOpenProject, showCreateModal, onCloseCreateModal }: DashboardPageProps) {
   const qc = useQueryClient()
-  const [showNewProject, setShowNewProject] = useState(false)
   const [projectName, setProjectName] = useState('')
+
+  const showNewProject = showCreateModal ?? false
+  const setShowNewProject = (v: boolean) => { if (!v) onCloseCreateModal?.() }
 
   const { data: projects = [], isLoading } = useQuery({
     queryKey: ['projects'],
@@ -67,15 +71,8 @@ export default function DashboardPage({ onOpenProject }: DashboardPageProps) {
   return (
     <div className="flex-1 p-6 overflow-y-auto animate-fade-in">
       {/* Header */}
-      <div className="mb-8 flex items-center justify-between">
+      <div className="mb-8">
         <p className="text-sm text-[#64748b]">Welcome back. Here's what's happening.</p>
-        <button
-          onClick={() => setShowNewProject(true)}
-          className="flex items-center gap-1.5 px-3 py-1.5 bg-[#f97316] hover:bg-[#ea6a0a] text-white text-xs font-semibold rounded-lg transition-colors"
-        >
-          <Plus size={13} />
-          New Project
-        </button>
       </div>
 
       {/* New Project Modal */}
