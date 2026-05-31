@@ -352,7 +352,12 @@ def train_model(
     remainder="drop",
   )
 
-  if task_type_override in ("classification", "regression"):
+  # Certain models force a specific task type regardless of user override
+  if model_type == "logistic_regression":
+    task_type = "classification"
+  elif model_type == "linear_regression":
+    task_type = "regression"
+  elif task_type_override in ("classification", "regression"):
     task_type = task_type_override
   else:
     task_type = "regression" if pd.api.types.is_numeric_dtype(y) else "classification"
