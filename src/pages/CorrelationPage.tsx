@@ -1,6 +1,7 @@
 import { useState, useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { ChevronRight, Trash2 } from 'lucide-react'
+import toast from 'react-hot-toast'
 import { preprocessingApi } from '../services/api/preprocessing'
 import type { PipelineStep } from '../types'
 
@@ -25,6 +26,7 @@ function corrTextColor(val: number): string {
 }
 
 export default function CorrelationPage({ projectId, onNext }: CorrelationPageProps) {
+  const qc = useQueryClient()
   const [threshold, setThreshold] = useState(0.85)
   const [dropped, setDropped] = useState<Set<string>>(new Set())
 
@@ -58,6 +60,32 @@ export default function CorrelationPage({ projectId, onNext }: CorrelationPagePr
     }
     return pairs
   }, [corrMatrix, displayFeatures, threshold])
+
+  // Collect the actual column names to drop from marked pairs
+  const columnsToDrop = useMemo(() => {
+    return [...dropped]
+      .map(pairKey => highCorrPairs.find(p => p.pair === pairKey)?.dropCol)
+      .filter((c): c is string => !!c)
+  }, [dropped, highCorrPairs])
+
+  const dropMutation = useMutation({
+    mutationFn: () => preprocessingApi.dropColumns(projectId, columnsToDrop),
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['analyze', projectId] })
+      qc.invalidateQueries({ queryKey: ['correlation', projectId] })
+      toast.success(`Dropped ${columnsToDrop.length} column(s)`)
+      onNext('scaling')
+    },
+    onError: (err: Error) => toast.error(err.message),
+  })
+
+  function handleSaveAndContinue() {
+    if (columnsToDrop.length > 0) {
+      dropMutation.mutate()
+    } else {
+      onNext('scaling')
+    }
+  }
 
   const toggleDrop = (pair: string) => {
     setDropped(prev => {
@@ -207,12 +235,21 @@ export default function CorrelationPage({ projectId, onNext }: CorrelationPagePr
 
       <div className="fixed bottom-0 bg-[#111827] border-t border-white/[0.06] flex items-center justify-between px-6 z-10"
         style={{ left: '220px', right: 0, height: '56px' }}>
-        <span className="text-sm text-white/40">{dropped.size} feature(s) marked for removal</span>
+        <span className="text-sm text-white/40">
+          {columnsToDrop.length > 0
+            ? `${columnsToDrop.length} column(s) will be dropped: ${columnsToDrop.join(', ')}`
+            : 'No columns marked for removal'}
+        </span>
         <div className="flex gap-3">
-          <button className="px-4 py-1.5 text-sm text-[#94a3b8] hover:text-white">Cancel</button>
-          <button onClick={() => onNext('scaling')}
-            className="flex items-center gap-2 px-5 py-1.5 bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-semibold rounded">
-            Save &amp; Continue <ChevronRight size={15} />
+          <button onClick={() => onNext('scaling')} className="px-4 py-1.5 text-sm text-[#64748b] hover:text-white">
+            Skip Step
+          </button>
+          <button
+            onClick={handleSaveAndContinue}
+            disabled={dropMutation.isPending}
+            className="flex items-center gap-2 px-5 py-1.5 bg-[#f97316] hover:bg-[#ea6c0a] disabled:opacity-50 text-white text-sm font-semibold rounded">
+            {dropMutation.isPending ? 'Dropping…' : 'Save & Continue'}
+            {!dropMutation.isPending && <ChevronRight size={15} />}
           </button>
         </div>
       </div>

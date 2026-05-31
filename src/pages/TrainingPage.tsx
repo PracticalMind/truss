@@ -1,4 +1,4 @@
-import { useState, useMemo } from 'react'
+import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
 import { ChevronDown, Play, Lock, Zap } from 'lucide-react'
 import toast from 'react-hot-toast'
@@ -48,9 +48,10 @@ const PARAM_CONFIGS: Record<ModelType, ParamConfig[]> = {
   ],
   logistic_regression: [
     { key: 'C', label: 'C (Regularization)', type: 'number', default: 1.0, description: 'Inverse of regularization strength' },
-    { key: 'penalty', label: 'Penalty', type: 'select', default: 'l2', options: ['l1', 'l2', 'elasticnet', 'none'], description: 'Regularization type' },
-    { key: 'solver', label: 'Solver', type: 'select', default: 'lbfgs', options: ['lbfgs', 'liblinear', 'saga', 'sag', 'newton-cg'], description: 'Optimization algorithm' },
+    { key: 'penalty', label: 'Penalty', type: 'select', default: 'l2', options: ['l1', 'l2', 'elasticnet', 'none'], description: 'l1→liblinear/saga · elasticnet→saga only' },
+    { key: 'solver', label: 'Solver', type: 'select', default: 'lbfgs', options: ['lbfgs', 'liblinear', 'saga', 'sag', 'newton-cg'], description: 'Auto-corrected if incompatible with penalty' },
     { key: 'max_iter', label: 'Max Iterations', type: 'number', default: 1000, description: 'Max convergence iterations' },
+    { key: 'class_weight', label: 'Class Weight', type: 'select', default: 'none', options: ['none', 'balanced'], description: 'Use balanced for imbalanced datasets' },
     { key: 'l1_ratio', label: 'L1 Ratio', type: 'number', default: 0.5, description: 'ElasticNet L1/L2 mix (elasticnet only)' },
     { key: 'fit_intercept', label: 'Fit Intercept', type: 'select', default: 'true', options: ['true', 'false'], description: 'Add bias term' },
     { key: 'tol', label: 'Tolerance', type: 'number', default: 0.0001, description: 'Convergence tolerance' },
@@ -119,21 +120,20 @@ export default function TrainingPage({ projectId, onNext }: TrainingPageProps) {
     return 'regression'
   }
 
-  const allColumns = useMemo(() => {
-    const cols = analyzeData?.dataset_info?.columns ?? []
-    if (cols.length > 0 && !targetCol) {
-      const defaultTarget = cols[cols.length - 1]
+  const allColumns = useMemo(
+    () => analyzeData?.dataset_info?.columns ?? [],
+    [analyzeData]
+  )
+
+  useEffect(() => {
+    if (allColumns.length > 0 && !targetCol) {
+      const defaultTarget = allColumns[allColumns.length - 1]
       setTargetCol(defaultTarget)
-      const catCols = analyzeData?.dataset_info?.categorical_columns ?? []
-      const stat = analyzeData?.analysis?.find((a: any) => a.column === defaultTarget)
-      const auto: TaskType = catCols.includes(defaultTarget) || (stat?.unique_values != null && stat.unique_values <= 20)
-        ? 'classification'
-        : 'regression'
-      setTaskType(auto)
+      setTaskType(inferTaskType(defaultTarget))
     }
-    return cols
+  // inferTaskType reads analyzeData from closure — include it
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [analyzeData])
+  }, [allColumns])
 
   function handleTargetSelect(col: string) {
     setTargetCol(col)
@@ -156,6 +156,7 @@ export default function TrainingPage({ projectId, onNext }: TrainingPageProps) {
       const raw = getParamValue(p.key, p.default)
       if (p.type === 'number') result[p.key] = parseFloat(raw) || p.default
       else if (p.key === 'bootstrap' || p.key === 'fit_intercept' || p.key === 'oob_score') result[p.key] = raw === 'true'
+      else if (p.key === 'class_weight') result[p.key] = raw === 'none' ? null : raw
       else result[p.key] = raw
     }
     return result

@@ -75,4 +75,10 @@ export const preprocessingApi = {
 
   correlation: (projectId: string) =>
     apiRequest<CorrelationResponse>(`/preprocessing/correlation/${projectId}`),
+
+  dropColumns: (projectId: string, columns: string[]) =>
+    apiRequest<DatasetInfo>(`/preprocessing/drop-columns/${projectId}`, {
+      method: 'POST',
+      body: JSON.stringify({ columns }),
+    }),
 }

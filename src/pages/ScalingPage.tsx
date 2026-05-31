@@ -76,11 +76,15 @@ export default function ScalingPage({ projectId, onNext }: ScalingPageProps) {
 
   const applyMutation = useMutation({
     mutationFn: () => {
+      if (mode === 'per_column' && Object.keys(colScalers).length === 0) {
+        toast.error('Per-column mode is active but no columns have been configured. Set at least one column scaler or switch to Global mode.')
+        return Promise.reject(new Error('No per-column overrides set'))
+      }
       const cols = [...effectiveSelected]
       return preprocessingApi.scaling(projectId, {
         method: selectedScaler,
         columns: cols.length === numericCols.length ? null : cols,
-        column_methods: mode === 'per_column' && Object.keys(colScalers).length > 0 ? colScalers : undefined,
+        column_methods: mode === 'per_column' ? colScalers : undefined,
       })
     },
     onSuccess: () => {
@@ -104,6 +108,15 @@ export default function ScalingPage({ projectId, onNext }: ScalingPageProps) {
     <div className="animate-fade-in" style={{ paddingBottom: '64px' }}>
       <div className="p-6">
         <DataPreview projectId={projectId} />
+
+        {/* Target column warning */}
+        <div className="mb-4 flex items-start gap-3 px-4 py-3 bg-[#f9731610] border border-[#f9731640] rounded-lg">
+          <span className="text-[#f97316] text-xs mt-0.5 flex-shrink-0">⚠</span>
+          <p className="text-xs text-[#f97316]">
+            Do not scale your target column. Scaling a 0/1 target produces float values that break classification training.
+            Deselect your target column in the table below before applying.
+          </p>
+        </div>
 
         {/* Info bar */}
         <div className="bg-[#111827] border border-[#1e2a3a] rounded-lg p-4 flex items-center justify-between mb-6">

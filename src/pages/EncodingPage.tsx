@@ -57,11 +57,16 @@ export default function EncodingPage({ projectId, onNext }: EncodingPageProps) {
   }
 
   const applyMutation = useMutation({
-    mutationFn: () =>
-      preprocessingApi.encoding(projectId, {
+    mutationFn: () => {
+      if (mode === 'per_column' && Object.keys(colMethods).length === 0) {
+        toast.error('Per-column mode is active but no columns have been configured. Set at least one column method or switch to Global mode.')
+        return Promise.reject(new Error('No per-column overrides set'))
+      }
+      return preprocessingApi.encoding(projectId, {
         method,
-        column_methods: mode === 'per_column' && Object.keys(colMethods).length > 0 ? colMethods : undefined,
-      }),
+        column_methods: mode === 'per_column' ? colMethods : undefined,
+      })
+    },
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['analyze', projectId] })
       toast.success('Encoding applied')

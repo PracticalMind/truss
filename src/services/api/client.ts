@@ -13,15 +13,20 @@ export async function apiRequest<T>(path: string, options: RequestInit = {}): Pr
   }
 
   const res = await fetch(`${BASE}${path}`, { ...options, headers })
-  const json = await res.json().catch(() => ({ detail: res.statusText }))
 
   if (!res.ok) {
-    // FastAPI validation errors return detail as an array of objects
-    const detail = Array.isArray(json.detail)
-      ? json.detail.map((d: { msg?: string }) => d.msg ?? JSON.stringify(d)).join(', ')
-      : json.detail
-    throw new Error(json.error ?? detail ?? `HTTP ${res.status}`)
+    const contentType = res.headers.get('content-type') ?? ''
+    if (contentType.includes('application/json')) {
+      const json = await res.json().catch(() => null)
+      const detail = Array.isArray(json?.detail)
+        ? json.detail.map((d: { msg?: string }) => d.msg ?? JSON.stringify(d)).join(', ')
+        : json?.detail
+      throw new Error(json?.error ?? detail ?? `HTTP ${res.status}`)
+    }
+    // Non-JSON response (HTML gateway errors, etc.)
+    throw new Error(`HTTP ${res.status}: ${res.statusText || 'Server error'}`)
   }
 
+  const json = await res.json().catch(() => null)
   return json as T
 }

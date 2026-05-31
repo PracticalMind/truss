@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useAuth } from './contexts/AuthContext'
 import LandingPage from './pages/LandingPage'
 import Sidebar from './components/Sidebar'
@@ -39,11 +39,39 @@ const STEP_BADGES: Partial<Record<PipelineStep, string>> = {}
 
 export default function App() {
   const { user, loading } = useAuth()
-  const [currentPage, setCurrentPage] = useState<AppPage>('dashboard')
-  const [currentStep, setCurrentStep] = useState<PipelineStep>('upload')
+  const [currentPage, setCurrentPage] = useState<AppPage>(() => {
+    return (localStorage.getItem('truss_page') as AppPage | null) ?? 'dashboard'
+  })
+  const [currentStep, setCurrentStep] = useState<PipelineStep>(() => {
+    return (localStorage.getItem('truss_step') as PipelineStep | null) ?? 'upload'
+  })
   const [authPage, setAuthPage] = useState<'landing' | 'login' | 'register' | 'reset'>('landing')
-  const [activeProjectId, setActiveProjectId] = useState<string | null>(null)
+  const [activeProjectId, setActiveProjectId] = useState<string | null>(() => {
+    return localStorage.getItem('truss_project_id')
+  })
   const [showCreateProject, setShowCreateProject] = useState(false)
+
+  useEffect(() => {
+    if (activeProjectId) localStorage.setItem('truss_project_id', activeProjectId)
+    else localStorage.removeItem('truss_project_id')
+  }, [activeProjectId])
+
+  useEffect(() => {
+    localStorage.setItem('truss_step', currentStep)
+  }, [currentStep])
+
+  useEffect(() => {
+    localStorage.setItem('truss_page', currentPage)
+  }, [currentPage])
+
+  // Clear persisted state on logout
+  useEffect(() => {
+    if (!user && !loading) {
+      localStorage.removeItem('truss_project_id')
+      localStorage.removeItem('truss_step')
+      localStorage.removeItem('truss_page')
+    }
+  }, [user, loading])
 
   if (loading) {
     return (
