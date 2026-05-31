@@ -13,6 +13,7 @@ interface EncodingPageProps {
 }
 
 type EncodingMethod = 'onehot' | 'label' | 'ordinal'
+type EncodingMode = 'global' | 'per_column'
 
 const METHODS: { label: string; value: EncodingMethod; description: string }[] = [
   { label: 'One-Hot', value: 'onehot', description: 'Creates binary columns for each category. Best for nominal data.' },
@@ -22,6 +23,7 @@ const METHODS: { label: string; value: EncodingMethod; description: string }[] =
 
 export default function EncodingPage({ projectId, onNext }: EncodingPageProps) {
   const qc = useQueryClient()
+  const [mode, setMode] = useState<EncodingMode>('global')
   const [method, setMethod] = useState<EncodingMethod>('label')
   const [colMethods, setColMethods] = useState<Record<string, EncodingMethod>>({})
   const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({})
@@ -43,17 +45,22 @@ export default function EncodingPage({ projectId, onNext }: EncodingPageProps) {
         name: col,
         unique: stat?.unique_values ?? 0,
         mostFrequent: String(stat?.most_frequent ?? '—'),
-        colMethod: colMethods[col] ?? method,
-        isOverridden: colMethods[col] !== undefined,
+        colMethod: (mode === 'per_column' ? colMethods[col] : undefined) ?? method,
+        isOverridden: mode === 'per_column' && colMethods[col] !== undefined,
       }
     })
-  }, [categoricalCols, analysis, colMethods, method])
+  }, [categoricalCols, analysis, colMethods, method, mode])
+
+  function switchMode(next: EncodingMode) {
+    setMode(next)
+    setColMethods({})
+  }
 
   const applyMutation = useMutation({
     mutationFn: () =>
       preprocessingApi.encoding(projectId, {
         method,
-        column_methods: Object.keys(colMethods).length > 0 ? colMethods : undefined,
+        column_methods: mode === 'per_column' && Object.keys(colMethods).length > 0 ? colMethods : undefined,
       }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: ['analyze', projectId] })
@@ -67,7 +74,9 @@ export default function EncodingPage({ projectId, onNext }: EncodingPageProps) {
     setOpenDropdowns(prev => ({ ...prev, [col]: !prev[col] }))
   }
 
-  const hasOnehotOverride = colStats.some(c => c.colMethod === 'onehot')
+  const hasOnehotActive = mode === 'global'
+    ? method === 'onehot'
+    : colStats.some(c => c.colMethod === 'onehot')
 
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '64px' }}>
@@ -83,20 +92,41 @@ export default function EncodingPage({ projectId, onNext }: EncodingPageProps) {
             )}
           </div>
           <div className="bg-[#111827] border border-[#1e2a3a] rounded-lg p-4">
-            <p className="text-[10px] text-[#64748b] uppercase tracking-widest mb-1">Default Method</p>
-            <p className="text-xl font-bold text-[#f97316]">{METHODS.find(m => m.value === method)?.label}</p>
+            <p className="text-[10px] text-[#64748b] uppercase tracking-widest mb-1">Active Method</p>
+            <p className="text-xl font-bold text-[#f97316]">
+              {mode === 'global' ? METHODS.find(m => m.value === method)?.label : 'Per Column'}
+            </p>
           </div>
           <div className="bg-[#111827] border border-[#1e2a3a] rounded-lg p-4">
-            <p className="text-[10px] text-[#64748b] uppercase tracking-widest mb-1">Per-Column Overrides</p>
-            <p className="text-2xl font-bold text-white">{Object.keys(colMethods).length}</p>
+            <p className="text-[10px] text-[#64748b] uppercase tracking-widest mb-1">Mode</p>
+            <p className="text-xl font-bold text-white">{mode === 'global' ? 'Global' : 'Per Column'}</p>
           </div>
         </div>
 
-        {/* Global default */}
-        <div className="bg-[#111827] border border-[#1e2a3a] rounded-lg p-5 mb-5">
+        {/* Mode toggle */}
+        <div className="bg-[#111827] border border-[#1e2a3a] rounded-lg p-1 mb-5 flex gap-1">
+          {(['global', 'per_column'] as EncodingMode[]).map(m => (
+            <button
+              key={m}
+              onClick={() => switchMode(m)}
+              className={`flex-1 py-2 rounded text-xs font-semibold transition-all ${
+                mode === m
+                  ? 'bg-[#f97316] text-white'
+                  : 'text-[#64748b] hover:text-white'
+              }`}
+            >
+              {m === 'global' ? 'Apply Globally' : 'Configure Per Column'}
+            </button>
+          ))}
+        </div>
+
+        {/* Global default — only interactive in global mode */}
+        <div className={`bg-[#111827] border border-[#1e2a3a] rounded-lg p-5 mb-5 transition-opacity ${mode === 'per_column' ? 'opacity-40 pointer-events-none' : ''}`}>
           <div className="flex items-center justify-between mb-3">
             <p className="text-[10px] font-semibold text-[#64748b] uppercase tracking-widest">Default Encoding Method</p>
-            <p className="text-[10px] text-[#4a5568]">Applied to all columns without a per-column override</p>
+            <p className="text-[10px] text-[#4a5568]">
+              {mode === 'global' ? 'Applied to all columns' : 'Disabled — per-column mode active'}
+            </p>
           </div>
           <div className="grid grid-cols-3 gap-3">
             {METHODS.map(m => (
@@ -113,7 +143,7 @@ export default function EncodingPage({ projectId, onNext }: EncodingPageProps) {
         <div className="bg-[#111827] border border-[#1e2a3a] rounded-lg overflow-hidden">
           <div className="px-5 py-3 border-b border-[#1e2a3a] flex items-center justify-between">
             <p className="text-[10px] font-semibold text-[#64748b] uppercase tracking-widest">Categorical Columns</p>
-            {Object.keys(colMethods).length > 0 && (
+            {mode === 'per_column' && Object.keys(colMethods).length > 0 && (
               <button onClick={() => setColMethods({})} className="text-[10px] text-[#f97316] hover:underline">
                 Reset all overrides
               </button>
@@ -141,41 +171,47 @@ export default function EncodingPage({ projectId, onNext }: EncodingPageProps) {
                     <td className="px-5 py-3 text-xs font-mono text-[#94a3b8]">{col.unique.toLocaleString()}</td>
                     <td className="px-5 py-3 text-xs text-[#64748b] font-mono truncate max-w-[120px]">{col.mostFrequent}</td>
                     <td className="px-5 py-3">
-                      <div className="flex items-center gap-2">
-                        <div className="relative">
-                          <button onClick={() => toggleDropdown(col.name)}
-                            className={`flex items-center gap-2 px-3 py-1.5 rounded text-xs justify-between min-w-[100px] border transition-colors ${
-                              col.isOverridden
-                                ? 'bg-[#f9731610] border-[#f97316] text-[#f97316]'
-                                : 'bg-[#1c2333] border-[#2d3748] text-[#e2e8f0] hover:border-[#374151]'
-                            }`}>
-                            {METHODS.find(m => m.value === col.colMethod)?.label}
-                            <ChevronDown size={11} className="text-[#64748b]" />
-                          </button>
-                          {openDropdowns[col.name] && (
-                            <div className="absolute top-full left-0 mt-1 w-36 bg-[#1c2333] border border-[#2d3748] rounded shadow-xl z-20">
-                              {METHODS.map(m => (
-                                <button key={m.value}
-                                  onClick={() => {
-                                    setColMethods(prev => ({ ...prev, [col.name]: m.value }))
-                                    toggleDropdown(col.name)
-                                  }}
-                                  className={`w-full text-left px-3 py-2 text-xs hover:bg-[#f9731618] hover:text-[#f97316] ${col.colMethod === m.value ? 'text-[#f97316] bg-[#f9731610]' : 'text-[#94a3b8]'}`}>
-                                  {m.label}
-                                </button>
-                              ))}
-                            </div>
+                      {mode === 'global' ? (
+                        <span className={`px-3 py-1.5 rounded text-xs bg-[#1c2333] border border-[#2d3748] text-[#94a3b8]`}>
+                          {METHODS.find(m => m.value === col.colMethod)?.label}
+                        </span>
+                      ) : (
+                        <div className="flex items-center gap-2">
+                          <div className="relative">
+                            <button onClick={() => toggleDropdown(col.name)}
+                              className={`flex items-center gap-2 px-3 py-1.5 rounded text-xs justify-between min-w-[100px] border transition-colors ${
+                                col.isOverridden
+                                  ? 'bg-[#f9731610] border-[#f97316] text-[#f97316]'
+                                  : 'bg-[#1c2333] border-[#2d3748] text-[#e2e8f0] hover:border-[#374151]'
+                              }`}>
+                              {METHODS.find(m => m.value === col.colMethod)?.label}
+                              <ChevronDown size={11} className="text-[#64748b]" />
+                            </button>
+                            {openDropdowns[col.name] && (
+                              <div className="absolute top-full left-0 mt-1 w-36 bg-[#1c2333] border border-[#2d3748] rounded shadow-xl z-20">
+                                {METHODS.map(m => (
+                                  <button key={m.value}
+                                    onClick={() => {
+                                      setColMethods(prev => ({ ...prev, [col.name]: m.value }))
+                                      toggleDropdown(col.name)
+                                    }}
+                                    className={`w-full text-left px-3 py-2 text-xs hover:bg-[#f9731618] hover:text-[#f97316] ${col.colMethod === m.value ? 'text-[#f97316] bg-[#f9731610]' : 'text-[#94a3b8]'}`}>
+                                    {m.label}
+                                  </button>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                          {col.isOverridden && (
+                            <button
+                              onClick={() => setColMethods(prev => { const n = { ...prev }; delete n[col.name]; return n })}
+                              className="text-[10px] text-[#4a5568] hover:text-[#94a3b8]"
+                            >
+                              reset
+                            </button>
                           )}
                         </div>
-                        {col.isOverridden && (
-                          <button
-                            onClick={() => setColMethods(prev => { const n = { ...prev }; delete n[col.name]; return n })}
-                            className="text-[10px] text-[#4a5568] hover:text-[#94a3b8]"
-                          >
-                            reset
-                          </button>
-                        )}
-                      </div>
+                      )}
                     </td>
                   </tr>
                 ))}
@@ -184,7 +220,7 @@ export default function EncodingPage({ projectId, onNext }: EncodingPageProps) {
           </div>
         </div>
 
-        {(method === 'onehot' || hasOnehotOverride) && categoricalCols.length > 0 && (
+        {hasOnehotActive && categoricalCols.length > 0 && (
           <div className="mt-4 flex items-start gap-3 p-3 bg-white/[0.04] border border-white/[0.08] rounded-lg">
             <Info size={14} className="text-[#64748b] mt-0.5 flex-shrink-0" />
             <p className="text-xs text-[#64748b]">
@@ -197,8 +233,9 @@ export default function EncodingPage({ projectId, onNext }: EncodingPageProps) {
       <div className="fixed bottom-0 bg-[#111827] border-t border-white/[0.06] flex items-center justify-between px-6 z-10"
         style={{ left: '220px', right: 0, height: '56px' }}>
         <span className="text-sm text-white/40">
-          {categoricalCols.length} categorical columns · {METHODS.find(m => m.value === method)?.label}
-          {Object.keys(colMethods).length > 0 && ` · ${Object.keys(colMethods).length} override(s)`}
+          {categoricalCols.length} categorical columns
+          {mode === 'global' && ` · ${METHODS.find(m => m.value === method)?.label}`}
+          {mode === 'per_column' && Object.keys(colMethods).length > 0 && ` · ${Object.keys(colMethods).length} custom override(s)`}
         </span>
         <div className="flex gap-3">
           <button onClick={() => onNext('correlation')} className="px-4 py-1.5 text-sm text-[#64748b] hover:text-white">

@@ -13,6 +13,7 @@ interface ScalingPageProps {
 }
 
 type ScalerType = 'standard' | 'minmax' | 'robust'
+type ScalingMode = 'global' | 'per_column'
 
 const SCALERS: { type: ScalerType; label: string; description: string; bestFor: string; recommended?: boolean }[] = [
   { type: 'standard', label: 'Standard', description: 'Removes mean and scales to unit variance. Assumes Gaussian distribution.', bestFor: 'Linear algorithms', recommended: true },
@@ -28,6 +29,7 @@ const SCALER_COLORS: Record<ScalerType, string> = {
 
 export default function ScalingPage({ projectId, onNext }: ScalingPageProps) {
   const qc = useQueryClient()
+  const [mode, setMode] = useState<ScalingMode>('global')
   const [selectedScaler, setSelectedScaler] = useState<ScalerType>('standard')
   const [selectedCols, setSelectedCols] = useState<Set<string> | null>(null)
   const [colScalers, setColScalers] = useState<Record<string, ScalerType>>({})
@@ -63,8 +65,8 @@ export default function ScalingPage({ projectId, onNext }: ScalingPageProps) {
     }
   }
 
-  function handleScalerCardClick(type: ScalerType) {
-    setSelectedScaler(type)
+  function switchMode(next: ScalingMode) {
+    setMode(next)
     setColScalers({})
   }
 
@@ -78,7 +80,7 @@ export default function ScalingPage({ projectId, onNext }: ScalingPageProps) {
       return preprocessingApi.scaling(projectId, {
         method: selectedScaler,
         columns: cols.length === numericCols.length ? null : cols,
-        column_methods: Object.keys(colScalers).length > 0 ? colScalers : undefined,
+        column_methods: mode === 'per_column' && Object.keys(colScalers).length > 0 ? colScalers : undefined,
       })
     },
     onSuccess: () => {
@@ -125,16 +127,33 @@ export default function ScalingPage({ projectId, onNext }: ScalingPageProps) {
             <p className="text-xs text-[#64748b]">
               Recommended: <span className="text-[#f97316] font-medium">StandardScaler</span>
             </p>
-            {Object.keys(colScalers).length > 0 && (
+            {mode === 'per_column' && Object.keys(colScalers).length > 0 && (
               <p className="text-[10px] text-[#64748b] mt-0.5">{Object.keys(colScalers).length} per-column override(s)</p>
             )}
           </div>
         </div>
 
-        {/* Scaler cards (set global default) */}
-        <div className="grid grid-cols-3 gap-3 mb-6">
+        {/* Mode toggle */}
+        <div className="bg-[#111827] border border-[#1e2a3a] rounded-lg p-1 mb-6 flex gap-1">
+          {(['global', 'per_column'] as ScalingMode[]).map(m => (
+            <button
+              key={m}
+              onClick={() => switchMode(m)}
+              className={`flex-1 py-2 rounded text-xs font-semibold transition-all ${
+                mode === m
+                  ? 'bg-[#f97316] text-white'
+                  : 'text-[#64748b] hover:text-white'
+              }`}
+            >
+              {m === 'global' ? 'Apply Globally' : 'Configure Per Column'}
+            </button>
+          ))}
+        </div>
+
+        {/* Scaler cards — only interactive in global mode */}
+        <div className={`grid grid-cols-3 gap-3 mb-6 transition-opacity ${mode === 'per_column' ? 'opacity-40 pointer-events-none' : ''}`}>
           {SCALERS.map(scaler => (
-            <button key={scaler.type} onClick={() => handleScalerCardClick(scaler.type)}
+            <button key={scaler.type} onClick={() => setSelectedScaler(scaler.type)}
               className={`relative text-left p-4 rounded-lg border transition-all duration-150 ${selectedScaler === scaler.type ? 'border-[#f97316] bg-[#f9731610]' : 'border-[#1e2a3a] bg-[#111827] hover:border-[#2d3748]'}`}>
               {scaler.recommended && (
                 <span className="absolute top-3 right-3 text-[9px] px-1.5 py-0.5 bg-[#1e2a3a] text-[#94a3b8] rounded uppercase tracking-wide border border-[#2d3748]">Recommended</span>
@@ -163,7 +182,7 @@ export default function ScalingPage({ projectId, onNext }: ScalingPageProps) {
               <button onClick={toggleAll} className="text-xs text-[#f97316] hover:underline">
                 {effectiveSelected.size === numericCols.length ? 'Deselect All' : 'Select All'}
               </button>
-              {Object.keys(colScalers).length > 0 && (
+              {mode === 'per_column' && Object.keys(colScalers).length > 0 && (
                 <button onClick={() => setColScalers({})} className="text-xs text-[#64748b] hover:text-[#94a3b8]">
                   Reset overrides
                 </button>
@@ -194,8 +213,8 @@ export default function ScalingPage({ projectId, onNext }: ScalingPageProps) {
                 {numericCols.map(col => {
                   const { min, max } = getColStats(col)
                   const selected = effectiveSelected.has(col)
-                  const colScaler: ScalerType = colScalers[col] ?? selectedScaler
-                  const isOverridden = colScalers[col] !== undefined
+                  const colScaler: ScalerType = (mode === 'per_column' ? colScalers[col] : undefined) ?? selectedScaler
+                  const isOverridden = mode === 'per_column' && colScalers[col] !== undefined
                   return (
                     <tr key={col} className={`border-b border-[#1e2a3a] transition-colors ${selected ? 'hover:bg-[#0d1117]' : 'opacity-40'}`}>
                       <td className="px-4 py-3">
@@ -206,45 +225,51 @@ export default function ScalingPage({ projectId, onNext }: ScalingPageProps) {
                       <td className="px-3 py-3 text-xs font-mono text-[#64748b]">{max}</td>
                       <td className="px-3 py-3">
                         {selected ? (
-                          <div className="flex items-center gap-2">
-                            <div className="relative">
-                              <button
-                                onClick={() => toggleColDropdown(col)}
-                                className={`flex items-center gap-2 px-2.5 py-1.5 rounded text-xs border min-w-[90px] justify-between transition-colors ${
-                                  isOverridden
-                                    ? 'bg-[#f9731610] border-[#f97316]'
-                                    : 'bg-[#1c2333] border-[#2d3748] hover:border-[#374151]'
-                                }`}
-                              >
-                                <span className={`font-semibold ${SCALER_COLORS[colScaler]?.split(' ')[0]}`}>
-                                  {SCALERS.find(s => s.type === colScaler)?.label}
-                                </span>
-                                <ChevronDown size={10} className="text-[#64748b] flex-shrink-0" />
-                              </button>
-                              {openDropdowns[col] && (
-                                <div className="absolute top-full left-0 mt-1 w-36 bg-[#1c2333] border border-[#2d3748] rounded shadow-xl z-20">
-                                  {SCALERS.map(s => (
-                                    <button key={s.type}
-                                      onClick={() => {
-                                        setColScalers(prev => ({ ...prev, [col]: s.type }))
-                                        toggleColDropdown(col)
-                                      }}
-                                      className={`w-full text-left px-3 py-2 text-xs hover:bg-[#f9731618] hover:text-[#f97316] transition-colors ${colScaler === s.type ? 'text-[#f97316] bg-[#f9731610]' : 'text-[#94a3b8]'}`}>
-                                      {s.label}
-                                    </button>
-                                  ))}
-                                </div>
+                          mode === 'global' ? (
+                            <span className={`px-2.5 py-1.5 rounded text-xs font-semibold ${SCALER_COLORS[colScaler]}`}>
+                              {SCALERS.find(s => s.type === colScaler)?.label}
+                            </span>
+                          ) : (
+                            <div className="flex items-center gap-2">
+                              <div className="relative">
+                                <button
+                                  onClick={() => toggleColDropdown(col)}
+                                  className={`flex items-center gap-2 px-2.5 py-1.5 rounded text-xs border min-w-[90px] justify-between transition-colors ${
+                                    isOverridden
+                                      ? 'bg-[#f9731610] border-[#f97316]'
+                                      : 'bg-[#1c2333] border-[#2d3748] hover:border-[#374151]'
+                                  }`}
+                                >
+                                  <span className={`font-semibold ${SCALER_COLORS[colScaler]?.split(' ')[0]}`}>
+                                    {SCALERS.find(s => s.type === colScaler)?.label}
+                                  </span>
+                                  <ChevronDown size={10} className="text-[#64748b] flex-shrink-0" />
+                                </button>
+                                {openDropdowns[col] && (
+                                  <div className="absolute top-full left-0 mt-1 w-36 bg-[#1c2333] border border-[#2d3748] rounded shadow-xl z-20">
+                                    {SCALERS.map(s => (
+                                      <button key={s.type}
+                                        onClick={() => {
+                                          setColScalers(prev => ({ ...prev, [col]: s.type }))
+                                          toggleColDropdown(col)
+                                        }}
+                                        className={`w-full text-left px-3 py-2 text-xs hover:bg-[#f9731618] hover:text-[#f97316] transition-colors ${colScaler === s.type ? 'text-[#f97316] bg-[#f9731610]' : 'text-[#94a3b8]'}`}>
+                                        {s.label}
+                                      </button>
+                                    ))}
+                                  </div>
+                                )}
+                              </div>
+                              {isOverridden && (
+                                <button
+                                  onClick={() => setColScalers(prev => { const n = { ...prev }; delete n[col]; return n })}
+                                  className="text-[10px] text-[#4a5568] hover:text-[#94a3b8]"
+                                >
+                                  reset
+                                </button>
                               )}
                             </div>
-                            {isOverridden && (
-                              <button
-                                onClick={() => setColScalers(prev => { const n = { ...prev }; delete n[col]; return n })}
-                                className="text-[10px] text-[#4a5568] hover:text-[#94a3b8]"
-                              >
-                                reset
-                              </button>
-                            )}
-                          </div>
+                          )
                         ) : (
                           <span className="text-[10px] text-[#374151]">—</span>
                         )}
@@ -261,8 +286,9 @@ export default function ScalingPage({ projectId, onNext }: ScalingPageProps) {
       <div className="fixed bottom-0 bg-[#111827] border-t border-white/[0.06] flex items-center justify-between px-6 z-10"
         style={{ left: '220px', right: 0, height: '56px' }}>
         <span className="text-sm text-white/40">
-          {effectiveSelected.size} columns · {SCALERS.find(s => s.type === selectedScaler)?.label}
-          {Object.keys(colScalers).length > 0 && ` · ${Object.keys(colScalers).length} override(s)`}
+          {effectiveSelected.size} columns
+          {mode === 'global' && ` · ${SCALERS.find(s => s.type === selectedScaler)?.label}`}
+          {mode === 'per_column' && Object.keys(colScalers).length > 0 && ` · ${Object.keys(colScalers).length} override(s)`}
         </span>
         <div className="flex gap-3">
           <button onClick={() => onNext('training')} className="px-4 py-1.5 text-sm text-[#64748b] hover:text-white">

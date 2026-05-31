@@ -6,6 +6,7 @@ interface TrainConfig {
   target_column: string
   test_size: number
   hyperparameters?: Record<string, unknown>
+  task_type?: string | null
 }
 
 interface TrainResponse {
@@ -24,9 +25,9 @@ interface ModelResult {
 
 export interface EvaluateResponse {
   accuracy: number
-  precision: number
-  recall: number
-  f1_score: number
+  precision: number | null
+  recall: number | null
+  f1_score: number | null
   problem_type: string | null
   best_model: string | null
   target_column: string | null
