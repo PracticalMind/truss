@@ -64,7 +64,7 @@ export default function OutliersPage({ projectId, onNext }: OutliersPageProps) {
         .map(([col, v]) => ({
           col,
           count: v.count,
-          pct: info ? ((v.count / info.shape[0]) * 100).toFixed(2) + '%' : '—',
+          pct: info ? ((v.count / info.shape[0]) * 100).toFixed(2) + '%' : '-',
         }))
       setDetected(rows)
       if (rows.length === 0) toast.success('No outliers detected')
@@ -99,15 +99,15 @@ export default function OutliersPage({ projectId, onNext }: OutliersPageProps) {
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="bg-[#111827] border border-[#1e2a3a] rounded-lg p-4">
             <p className="text-[10px] text-[#64748b] uppercase tracking-widest mb-1">Numeric Columns</p>
-            <p className="text-3xl font-bold text-white">{isLoading ? '—' : numericCols.length}</p>
+            <p className="text-3xl font-bold text-white">{isLoading ? '-' : numericCols.length}</p>
           </div>
           <div className="bg-[#111827] border border-[#1e2a3a] rounded-lg p-4">
             <p className="text-[10px] text-[#64748b] uppercase tracking-widest mb-1">Outliers Detected</p>
-            <p className="text-3xl font-bold text-white">{detected ? totalOutliers.toLocaleString() : '—'}</p>
+            <p className="text-3xl font-bold text-white">{detected ? totalOutliers.toLocaleString() : '-'}</p>
           </div>
           <div className="bg-[#111827] border border-[#1e2a3a] rounded-lg p-4">
             <p className="text-[10px] text-[#64748b] uppercase tracking-widest mb-1">Columns Affected</p>
-            <p className="text-3xl font-bold text-white">{detected ? detected.length : '—'}</p>
+            <p className="text-3xl font-bold text-white">{detected ? detected.length : '-'}</p>
           </div>
         </div>
 

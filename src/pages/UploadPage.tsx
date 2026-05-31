@@ -118,7 +118,7 @@ export default function UploadPage({ projectId, onNext }: UploadPageProps) {
           <div className="animate-fade-in">
             <div className="flex items-center justify-between mb-3">
               <p className="text-xs font-mono text-[#64748b] uppercase tracking-widest">
-                Preview — first 7 rows
+                Preview - first 7 rows
               </p>
             </div>
             <div className="rounded-lg border border-[#1e2a3a] overflow-x-auto">

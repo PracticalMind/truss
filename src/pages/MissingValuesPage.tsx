@@ -45,8 +45,8 @@ function MethodBadge({ method }: { method: string }) {
 
 export default function MissingValuesPage({ projectId, onNext }: MissingValuesPageProps) {
   const qc = useQueryClient()
-  const [numMethod, setNumMethod] = useState<Method>('mean')
-  const [catMethod, setCatMethod] = useState<Method>('mode')
+  const [numMethod, setNumMethod] = useState<Method>('none')
+  const [catMethod, setCatMethod] = useState<Method>('none')
   const [colOverrides, setColOverrides] = useState<Record<string, Method>>({})
   const [openDropdowns, setOpenDropdowns] = useState<Record<string, boolean>>({})
   const [globalNumOpen, setGlobalNumOpen] = useState(false)
@@ -212,7 +212,7 @@ export default function MissingValuesPage({ projectId, onNext }: MissingValuesPa
                   <tr><td colSpan={5} className="px-5 py-8 text-center text-sm text-[#64748b]">Loading…</td></tr>
                 )}
                 {!isLoading && missingCols.length === 0 && (
-                  <tr><td colSpan={5} className="px-5 py-8 text-center text-sm text-[#22c55e]">No missing values — dataset is complete!</td></tr>
+                  <tr><td colSpan={5} className="px-5 py-8 text-center text-sm text-[#22c55e]">No missing values - dataset is complete!</td></tr>
                 )}
                 {missingCols.map(col => {
                   const effective = getEffectiveMethod(col.name, col.isNumeric)

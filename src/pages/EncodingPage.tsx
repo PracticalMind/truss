@@ -44,7 +44,7 @@ export default function EncodingPage({ projectId, onNext }: EncodingPageProps) {
       return {
         name: col,
         unique: stat?.unique_values ?? 0,
-        mostFrequent: String(stat?.most_frequent ?? '—'),
+        mostFrequent: String(stat?.most_frequent ?? '-'),
         colMethod: (mode === 'per_column' ? colMethods[col] : undefined) ?? method,
         isOverridden: mode === 'per_column' && colMethods[col] !== undefined,
       }
@@ -120,12 +120,12 @@ export default function EncodingPage({ projectId, onNext }: EncodingPageProps) {
           ))}
         </div>
 
-        {/* Global default — only interactive in global mode */}
+        {/* Global default - only interactive in global mode */}
         <div className={`bg-[#111827] border border-[#1e2a3a] rounded-lg p-5 mb-5 transition-opacity ${mode === 'per_column' ? 'opacity-40 pointer-events-none' : ''}`}>
           <div className="flex items-center justify-between mb-3">
             <p className="text-[10px] font-semibold text-[#64748b] uppercase tracking-widest">Default Encoding Method</p>
             <p className="text-[10px] text-[#4a5568]">
-              {mode === 'global' ? 'Applied to all columns' : 'Disabled — per-column mode active'}
+              {mode === 'global' ? 'Applied to all columns' : 'Disabled - per-column mode active'}
             </p>
           </div>
           <div className="grid grid-cols-3 gap-3">

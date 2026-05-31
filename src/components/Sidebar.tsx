@@ -83,7 +83,7 @@ export default function Sidebar({ currentPage, currentStep, onPageChange, onStep
         </button>
       </div>
 
-      {/* Main Nav — no section label */}
+      {/* Main Nav - no section label */}
       <nav className="px-3 pt-4 pb-2 flex-shrink-0">
         <NavItem
           icon={<LayoutDashboard size={15} />}

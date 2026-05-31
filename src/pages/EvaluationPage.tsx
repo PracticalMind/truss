@@ -21,10 +21,10 @@ export default function EvaluationPage({ projectId, onNext }: EvaluationPageProp
 
   const metricCards = evalData ? [
     { label: isRegression ? 'R² Score' : 'Accuracy', value: fmt(evalData.accuracy), show: true },
-    { label: 'Precision', value: evalData.precision != null ? fmt(evalData.precision) : '—', show: !isRegression },
-    { label: 'Recall', value: evalData.recall != null ? fmt(evalData.recall) : '—', show: !isRegression },
-    { label: 'F1-Score', value: evalData.f1_score != null ? fmt(evalData.f1_score) : '—', show: !isRegression },
-    { label: 'Best Model', value: evalData.best_model ?? '—', show: true },
+    { label: 'Precision', value: evalData.precision != null ? fmt(evalData.precision) : '-', show: !isRegression },
+    { label: 'Recall', value: evalData.recall != null ? fmt(evalData.recall) : '-', show: !isRegression },
+    { label: 'F1-Score', value: evalData.f1_score != null ? fmt(evalData.f1_score) : '-', show: !isRegression },
+    { label: 'Best Model', value: evalData.best_model ?? '-', show: true },
   ].filter(m => m.show) : []
 
   const featureImportance = evalData?.feature_importance
@@ -44,7 +44,7 @@ export default function EvaluationPage({ projectId, onNext }: EvaluationPageProp
         <div className="flex items-center justify-between mb-6">
           <p className="text-sm text-[#64748b]">
             {evalData
-              ? `${evalData.best_model} — ${evalData.problem_type} — target: ${evalData.target_column ?? '—'}`
+              ? `${evalData.best_model} - ${evalData.problem_type} - target: ${evalData.target_column ?? '-'}`
               : isLoading ? 'Loading results…' : 'No models trained yet'}
           </p>
           {!isLoading && evalData && (
@@ -80,7 +80,7 @@ export default function EvaluationPage({ projectId, onNext }: EvaluationPageProp
         {!isLoading && isRegression && evalData && (
           <div className="mb-5 px-4 py-3 bg-[#38bdf808] border border-[#38bdf830] rounded-lg">
             <p className="text-xs text-[#38bdf8]">
-              Regression task — showing R², RMSE and MAE.
+              Regression task - showing R², RMSE and MAE.
               Precision / Recall / F1 are classification metrics and do not apply here.
             </p>
             {evalData && (
@@ -125,8 +125,8 @@ export default function EvaluationPage({ projectId, onNext }: EvaluationPageProp
                         </>
                       ) : (
                         <>
-                          <td className="px-5 py-3 text-xs font-mono text-[#f97316]">{r.metrics?.rmse?.toFixed(4) ?? '—'}</td>
-                          <td className="px-5 py-3 text-xs font-mono text-[#94a3b8]">{r.metrics?.mae?.toFixed(4) ?? '—'}</td>
+                          <td className="px-5 py-3 text-xs font-mono text-[#f97316]">{r.metrics?.rmse?.toFixed(4) ?? '-'}</td>
+                          <td className="px-5 py-3 text-xs font-mono text-[#94a3b8]">{r.metrics?.mae?.toFixed(4) ?? '-'}</td>
                         </>
                       )}
                     </tr>
@@ -138,7 +138,7 @@ export default function EvaluationPage({ projectId, onNext }: EvaluationPageProp
         )}
 
         <div className="grid grid-cols-3 gap-5">
-          {/* Confusion Matrix — classification only */}
+          {/* Confusion Matrix - classification only */}
           <div className="col-span-1 bg-[#111827] border border-[#1e2a3a] rounded-lg p-5">
             <p className="text-[10px] font-semibold text-[#64748b] uppercase tracking-widest mb-3">Confusion Matrix</p>
             {isLoading ? (

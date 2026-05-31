@@ -113,7 +113,7 @@ export default function TrainingPage({ projectId, onNext }: TrainingPageProps) {
   function inferTaskType(col: string): TaskType {
     const catCols = analyzeData?.dataset_info?.categorical_columns ?? []
     if (catCols.includes(col)) return 'classification'
-    // numeric: check unique count — few uniques → likely classification
+    // numeric: check unique count - few uniques → likely classification
     const stat = analyzeData?.analysis?.find((a: any) => a.column === col)
     if (stat && stat.unique_values != null && stat.unique_values <= 20) return 'classification'
     return 'regression'
@@ -172,7 +172,7 @@ export default function TrainingPage({ projectId, onNext }: TrainingPageProps) {
       }),
     onSuccess: (data) => {
       setLastMetrics(data.metrics)
-      toast.success(`Training complete — accuracy: ${(data.metrics.accuracy * 100).toFixed(1)}%`)
+      toast.success(`Training complete - accuracy: ${(data.metrics.accuracy * 100).toFixed(1)}%`)
       onNext('evaluation')
     },
     onError: (err: Error) => toast.error(err.message),
@@ -285,7 +285,7 @@ export default function TrainingPage({ projectId, onNext }: TrainingPageProps) {
             )}
           </div>
 
-          {/* Advanced Settings — per model */}
+          {/* Advanced Settings - per model */}
           <div className="bg-[#111827] border border-[#1e2a3a] rounded-lg overflow-hidden">
             <button onClick={() => setAdvancedOpen(v => !v)}
               className="w-full flex items-center justify-between px-5 py-4 text-sm text-[#94a3b8] hover:text-white transition-colors">

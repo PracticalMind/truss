@@ -157,7 +157,7 @@ export default function ProjectsPage({ onOpenProject }: ProjectsPageProps) {
                 {/* Dataset */}
                 <div className="col-span-2 min-w-0">
                   <p className="text-xs font-mono text-[#4a5568] truncate">
-                    {project.filename ?? '—'}
+                    {project.filename ?? '-'}
                   </p>
                   {project.shape && (
                     <p className="text-[10px] text-[#374151]">{project.shape[0].toLocaleString()} × {project.shape[1]}</p>

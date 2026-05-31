@@ -165,7 +165,7 @@ export default function OptimizationPage({ projectId, onNext }: OptimizationPage
       <div className="fixed bottom-0 bg-[#111827] border-t border-white/[0.06] flex items-center justify-between px-6 z-10"
         style={{ left: '220px', right: 0, height: '56px' }}>
         <span className="text-sm text-white/40">
-          {evalData ? `Best: ${evalData.best_model} — ${fmt(evalData.accuracy)}` : ''}
+          {evalData ? `Best: ${evalData.best_model} - ${fmt(evalData.accuracy)}` : ''}
         </span>
         <div className="flex gap-3">
           <button className="px-4 py-1.5 text-sm text-[#94a3b8] hover:text-white">Cancel</button>

@@ -28,13 +28,13 @@ export default function AnalyzePage({ projectId, onNext }: AnalyzePageProps) {
     ? Object.values(info.missing_values).reduce((a, b) => a + b, 0)
     : 0
   const totalCells = info ? info.shape[0] * info.shape[1] : 1
-  const missingPct = info ? ((totalMissing / totalCells) * 100).toFixed(1) + '%' : '—'
+  const missingPct = info ? ((totalMissing / totalCells) * 100).toFixed(1) + '%' : '-'
 
   const stats = [
-    { label: 'Total Rows', value: info ? info.shape[0].toLocaleString() : '—' },
-    { label: 'Columns', value: info ? String(info.shape[1]) : '—' },
+    { label: 'Total Rows', value: info ? info.shape[0].toLocaleString() : '-' },
+    { label: 'Columns', value: info ? String(info.shape[1]) : '-' },
     { label: 'Missing Values', value: missingPct },
-    { label: 'Dataset Size', value: info ? `${info.shape[0]} × ${info.shape[1]}` : '—' },
+    { label: 'Dataset Size', value: info ? `${info.shape[0]} × ${info.shape[1]}` : '-' },
   ]
 
   return (
@@ -90,7 +90,7 @@ export default function AnalyzePage({ projectId, onNext }: AnalyzePageProps) {
                 )}
                 {columns.map((col) => {
                   const missing = info?.missing_values[col.column] ?? 0
-                  const missingColPct = info ? ((missing / info.shape[0]) * 100).toFixed(1) + '%' : '—'
+                  const missingColPct = info ? ((missing / info.shape[0]) * 100).toFixed(1) + '%' : '-'
                   const sample = col.type === 'numeric'
                     ? `mean: ${col.mean?.toFixed(2)} / std: ${col.std?.toFixed(2)}`
                     : `${col.most_frequent} (${col.frequency}x)`

@@ -93,10 +93,10 @@ export default function ScalingPage({ projectId, onNext }: ScalingPageProps) {
 
   const getColStats = (col: string) => {
     const stat = analysis.find(a => a.column === col)
-    if (!stat || stat.type !== 'numeric') return { min: '—', max: '—' }
+    if (!stat || stat.type !== 'numeric') return { min: '-', max: '-' }
     return {
-      min: stat.min?.toFixed(3) ?? '—',
-      max: stat.max?.toFixed(3) ?? '—',
+      min: stat.min?.toFixed(3) ?? '-',
+      max: stat.max?.toFixed(3) ?? '-',
     }
   }
 
@@ -150,7 +150,7 @@ export default function ScalingPage({ projectId, onNext }: ScalingPageProps) {
           ))}
         </div>
 
-        {/* Scaler cards — only interactive in global mode */}
+        {/* Scaler cards - only interactive in global mode */}
         <div className={`grid grid-cols-3 gap-3 mb-6 transition-opacity ${mode === 'per_column' ? 'opacity-40 pointer-events-none' : ''}`}>
           {SCALERS.map(scaler => (
             <button key={scaler.type} onClick={() => setSelectedScaler(scaler.type)}
@@ -271,7 +271,7 @@ export default function ScalingPage({ projectId, onNext }: ScalingPageProps) {
                             </div>
                           )
                         ) : (
-                          <span className="text-[10px] text-[#374151]">—</span>
+                          <span className="text-[10px] text-[#374151]">-</span>
                         )}
                       </td>
                     </tr>

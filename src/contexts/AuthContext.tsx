@@ -39,7 +39,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       setLoading(false);
     }).catch(() => {
-      // Supabase unavailable — treat as logged out
+      // Supabase unavailable - treat as logged out
       setUser(null);
       setLoading(false);
     });
@@ -53,7 +53,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         });
         if (event === 'SIGNED_IN' || event === 'TOKEN_REFRESHED') {
           authApi.sync().catch(() => {
-            // Intentionally ignored — sync failure must not block the app
+            // Intentionally ignored - sync failure must not block the app
           });
         }
       } else {

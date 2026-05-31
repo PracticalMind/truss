@@ -60,7 +60,7 @@ export default function DashboardPage({ onOpenProject, showCreateModal, onCloseC
   }
 
   const completedProjects = projects.filter((p) => p.status === 'completed')
-  const avgAccuracy = '—'
+  const avgAccuracy = '-'
 
   const stats = [
     { label: 'Projects', value: String(projects.length), sub: projects.length === 0 ? 'Create your first project' : 'Total projects' },

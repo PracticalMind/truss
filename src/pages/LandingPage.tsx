@@ -97,7 +97,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
         </div>
       </nav>
 
-      {/* ── SECTION 1 — Hero ── */}
+      {/* ── SECTION 1 - Hero ── */}
       <section id="hero" className="min-h-screen flex flex-col justify-center pt-14" style={{ background: '#0a0f1e' }}>
         <div className="max-w-7xl mx-auto px-6 w-full py-16">
           <div className="grid grid-cols-2 gap-12 items-center">
@@ -127,7 +127,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
               </FadeIn>
             </div>
 
-            {/* Mockup — slides from right */}
+            {/* Mockup - slides from right */}
             <FadeIn x={60} delay={0.12}>
               <div className="relative">
                 <div
@@ -189,7 +189,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
         </div>
       </section>
 
-      {/* ── SECTION 2 — Workflow ── */}
+      {/* ── SECTION 2 - Workflow ── */}
       <section id="section-workflow" className="min-h-screen flex flex-col justify-center items-center border-t border-white/[0.06]" style={{ background: '#0d1117' }}>
         <div className="max-w-7xl mx-auto px-6 w-full py-16">
           <FadeIn y={20} delay={0}>
@@ -243,7 +243,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
         </div>
       </section>
 
-      {/* ── SECTION 3 — Mode Comparison ── */}
+      {/* ── SECTION 3 - Mode Comparison ── */}
       <section id="section-modes" className="min-h-screen flex flex-col justify-center" style={{ background: '#0a0f1e' }}>
         <div className="max-w-7xl mx-auto px-6 w-full py-16">
           <FadeIn y={20} delay={0}>
@@ -257,7 +257,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
 
           <div className="h-1.5 bg-gradient-to-r from-[#f97316] to-[#f97316]/20 rounded-t-lg" />
           <div className="grid grid-cols-2 gap-0 border border-white/[0.08] rounded-b-lg rounded-tr-lg overflow-hidden">
-            {/* Manual Mode — slides from left */}
+            {/* Manual Mode - slides from left */}
             <FadeIn x={-40} delay={0.1} className="contents">
               <div className="p-8 bg-[#111827] border-r border-white/[0.06]">
                 <div className="flex items-center justify-between mb-5">
@@ -292,7 +292,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
               </div>
             </FadeIn>
 
-            {/* AI Mode — slides from right */}
+            {/* AI Mode - slides from right */}
             <FadeIn x={40} delay={0.1} className="contents">
               <div className="p-8 bg-[#0d1117] opacity-70 relative">
                 <div className="flex items-center justify-between mb-5">
@@ -326,7 +326,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
         </div>
       </section>
 
-      {/* ── SECTION 4 — Pricing ── */}
+      {/* ── SECTION 4 - Pricing ── */}
       <section id="section-pricing" className="min-h-screen flex flex-col justify-center border-t border-white/[0.06]" style={{ background: '#0d1117' }}>
         <div className="max-w-7xl mx-auto px-6 w-full py-16">
           <FadeIn y={20} delay={0}>
@@ -360,7 +360,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
               </div>
             </FadeIn>
 
-            {/* Professional — scale entrance */}
+            {/* Professional - scale entrance */}
             <motion.div
               ref={useRef(null)}
               initial={{ opacity: 0, scale: 0.95 }}

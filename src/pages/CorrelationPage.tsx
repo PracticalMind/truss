@@ -77,12 +77,12 @@ export default function CorrelationPage({ projectId, onNext }: CorrelationPagePr
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="bg-[#111827] border border-[#1e2a3a] rounded-lg p-4">
             <p className="text-[10px] text-[#64748b] uppercase tracking-widest mb-1">Numeric Columns</p>
-            <p className="text-2xl font-bold text-white">{isLoading ? '—' : features.length}</p>
+            <p className="text-2xl font-bold text-white">{isLoading ? '-' : features.length}</p>
           </div>
           <div className="bg-[#111827] border border-[#1e2a3a] rounded-lg p-4">
             <p className="text-[10px] text-[#64748b] uppercase tracking-widest mb-1">High Corr Pairs</p>
             <p className={`text-2xl font-bold ${highCorrPairs.length > 0 ? 'text-[#f87171]' : 'text-[#22c55e]'}`}>
-              {isLoading ? '—' : highCorrPairs.length}
+              {isLoading ? '-' : highCorrPairs.length}
             </p>
           </div>
           <div className="bg-[#111827] border border-[#1e2a3a] rounded-lg p-4">
