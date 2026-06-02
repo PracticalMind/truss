@@ -12,7 +12,7 @@ from app.core.auth import get_current_user
 from app.core.redis import get_dataframe
 from app.services.db import get_db
 from app.services.models import User, Project, TrainedModel
-from app.services.ml_pipeline import train_model
+from app.services.ml_pipeline import train_model, optimize_hyperparams
 from app.schemas.model import TrainRequest, TrainResponse, EvaluateResponse, OptimizeRequest, OptimizeResponse
 from app.utils.json_sanitize import sanitize_for_json
 
@@ -166,7 +166,7 @@ async def optimize_model(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    """Hyperparameter optimization stub — will dispatch a Celery task when integrated."""
+    """Runs hyperparameter search on the best trained model for the project."""
     result = await db.execute(
         select(Project).where(
             Project.id == uuid.UUID(project_id),
@@ -176,8 +176,63 @@ async def optimize_model(
     if result.scalar_one_or_none() is None:
         raise HTTPException(status_code=404, detail="Project not found")
 
+    best_result = await db.execute(
+        select(TrainedModel)
+        .where(TrainedModel.project_id == uuid.UUID(project_id), TrainedModel.is_best == True)  # noqa: E712
+        .order_by(TrainedModel.created_at.desc())
+    )
+    best_model = best_result.scalar_one_or_none()
+    if best_model is None:
+        raise HTTPException(status_code=404, detail="No trained model found. Complete the Training step first.")
+
+    df = await get_dataframe(project_id)
+    if df is None:
+        raise HTTPException(status_code=404, detail="Project data not found in cache. Please re-upload.")
+
+    model_type = best_model.model_type
+    target_column = best_model.target_column
+    task_type = best_model.task_type
+    baseline_score = float((best_model.metrics or {}).get("accuracy") or (best_model.metrics or {}).get("r2") or 0.0)
+
+    # Bayesian falls back to random search (no external dependency required)
+    strategy = body.strategy if body.strategy in ("random", "grid") else "random"
+
+    try:
+        loop = asyncio.get_running_loop()
+        opt_result = await loop.run_in_executor(
+            None,
+            partial(
+                optimize_hyperparams,
+                df=df,
+                model_type=model_type,
+                target_column=target_column,
+                test_size=body.test_size,
+                strategy=strategy,
+                n_trials=body.n_trials,
+                param_ranges=body.param_ranges or None,
+                param_choices=body.param_choices or None,
+                task_type_override=task_type,
+            ),
+        )
+    except Exception as exc:
+        logger.exception(f"Optimization failed for project {project_id}")
+        raise HTTPException(status_code=500, detail=f"Optimization failed: {exc}")
+
+    best_score = opt_result["best_score"]
+    improvement = best_score - baseline_score
+
+    logger.info(
+        f"Optimization complete for project {project_id}: {model_type} | "
+        f"baseline={baseline_score:.4f} best={best_score:.4f} trials={opt_result['trials_run']}"
+    )
+
     return {
         "success": True,
-        "best_params": body.params,
-        "best_score": 0.0,
+        "best_params": opt_result["best_params"],
+        "best_score": best_score,
+        "baseline_score": baseline_score,
+        "improvement": improvement,
+        "trials_run": opt_result["trials_run"],
+        "model_type": model_type,
+        "strategy": body.strategy,
     }

@@ -40,13 +40,22 @@ class EvaluateResponse(BaseModel):
 
 
 class OptimizeRequest(BaseModel):
-  params: Dict[str, Any] = {}
+  strategy: str = "random"   # "random" | "grid" | "bayesian"
+  n_trials: int = 20
+  test_size: float = 0.2
+  param_ranges: Dict[str, List[float]] = {}   # {param: [min, max]}
+  param_choices: Dict[str, List[str]] = {}    # {param: [opt1, opt2, ...]}
 
 
 class OptimizeResponse(BaseModel):
   success: bool
   best_params: Dict[str, Any]
-  best_score: Optional[float] = None
+  best_score: float
+  baseline_score: float
+  improvement: float
+  trials_run: int
+  model_type: str
+  strategy: str
 
 
 class PredictRequest(BaseModel):

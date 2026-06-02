@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import random
+from itertools import product
 from typing import Dict, List, Any, Tuple
 import numpy as np
 import pandas as pd
@@ -299,6 +301,143 @@ def compute_correlation(df: pd.DataFrame) -> Tuple[Dict[str, Dict[str, float]], 
       val = corr.loc[col1, col2]
       matrix[col1][col2] = float(val) if not pd.isna(val) else 0.0
   return matrix, list(corr.columns)
+
+
+def _default_param_ranges(model_type: str) -> Dict[str, List[float]]:
+  """Default [min, max] search ranges for numeric params per model type."""
+  if model_type == "xgboost":
+    return {
+      "max_depth": [3, 10],
+      "learning_rate": [0.01, 0.3],
+      "n_estimators": [50, 500],
+      "subsample": [0.6, 1.0],
+      "colsample_bytree": [0.6, 1.0],
+    }
+  if model_type == "random_forest":
+    return {
+      "n_estimators": [50, 300],
+      "max_depth": [5, 25],
+      "min_samples_split": [2, 10],
+      "min_samples_leaf": [1, 4],
+    }
+  if model_type == "logistic_regression":
+    return {"C": [0.01, 10.0], "max_iter": [100, 2000]}
+  return {}
+
+
+def _default_param_choices(model_type: str) -> Dict[str, List[str]]:
+  """Default categorical option lists per model type."""
+  if model_type == "random_forest":
+    return {"max_features": ["sqrt", "log2"]}
+  if model_type == "logistic_regression":
+    return {
+      "penalty": ["l1", "l2"],
+      "solver": ["lbfgs", "liblinear", "saga"],
+    }
+  return {}
+
+
+_PARAM_TYPES: Dict[str, Dict[str, str]] = {
+  "xgboost": {
+    "max_depth": "int", "learning_rate": "float",
+    "n_estimators": "int", "subsample": "float", "colsample_bytree": "float",
+  },
+  "random_forest": {
+    "n_estimators": "int", "max_depth": "int",
+    "min_samples_split": "int", "min_samples_leaf": "int",
+    "max_features": "categorical",
+  },
+  "logistic_regression": {
+    "C": "float", "max_iter": "int",
+    "penalty": "categorical", "solver": "categorical",
+  },
+}
+
+
+def _primary_metric(metrics: Dict[str, Any]) -> float:
+  return float(metrics.get("accuracy") or metrics.get("r2") or 0.0)
+
+
+def _make_candidates(
+  param_ranges: Dict[str, List[float]],
+  param_choices: Dict[str, List[str]],
+  param_types: Dict[str, str],
+  strategy: str,
+  n: int,
+) -> List[Dict[str, Any]]:
+  """Generates n candidate hyperparameter dicts from numeric ranges and categorical choices."""
+  if strategy == "grid":
+    n_dims = len(param_ranges) + len(param_choices)
+    pts = max(2, int(round(n ** (1 / n_dims)))) if n_dims else 2
+    grid: Dict[str, List[Any]] = {}
+    for key, (mn, mx) in param_ranges.items():
+      if param_types.get(key) == "int":
+        step = max(1, (int(mx) - int(mn)) // (pts - 1))
+        grid[key] = list(range(int(mn), int(mx) + 1, step))
+      else:
+        grid[key] = [round(mn + i * (mx - mn) / (pts - 1), 6) for i in range(pts)]
+    for key, choices in param_choices.items():
+      grid[key] = choices
+    combos = list(product(*grid.values()))
+    random.shuffle(combos)
+    return [dict(zip(grid.keys(), c)) for c in combos[:n]]
+  else:
+    # Random / Bayesian: uniform sampling within ranges + random choice for categoricals
+    candidates = []
+    for _ in range(n):
+      params: Dict[str, Any] = {}
+      for key, (mn, mx) in param_ranges.items():
+        if param_types.get(key) == "int":
+          params[key] = random.randint(int(mn), int(mx))
+        else:
+          params[key] = round(random.uniform(mn, mx), 6)
+      for key, choices in param_choices.items():
+        params[key] = random.choice(choices)
+      candidates.append(params)
+    return candidates
+
+
+def optimize_hyperparams(
+  df: pd.DataFrame,
+  model_type: str,
+  target_column: str,
+  test_size: float,
+  strategy: str,
+  n_trials: int,
+  param_ranges: Dict[str, List[float]] | None = None,
+  param_choices: Dict[str, List[str]] | None = None,
+  task_type_override: str | None = None,
+) -> Dict[str, Any]:
+  """Searches for optimal hyperparameters; returns best_params, best_score, trials_run."""
+  effective_ranges = {**_default_param_ranges(model_type), **(param_ranges or {})}
+  effective_choices = {
+    **_default_param_choices(model_type),
+    **{k: v for k, v in (param_choices or {}).items() if v},
+  }
+
+  if not effective_ranges and not effective_choices:
+    _, _, metrics = train_model(df, model_type, target_column, test_size, {}, task_type_override)
+    return {"best_params": {}, "best_score": _primary_metric(metrics), "trials_run": 1}
+
+  param_types = _PARAM_TYPES.get(model_type, {})
+  candidates = _make_candidates(effective_ranges, effective_choices, param_types, strategy, n_trials)
+
+  best_score = -float("inf")
+  best_params: Dict[str, Any] = candidates[0]
+  trials_run = 0
+
+  for params in candidates:
+    try:
+      _, _, metrics = train_model(df, model_type, target_column, test_size, params, task_type_override)
+      score = _primary_metric(metrics)
+      trials_run += 1
+      if score > best_score:
+        best_score = score
+        best_params = params
+    except Exception:
+      continue
+
+  return {"best_params": best_params, "best_score": best_score, "trials_run": trials_run}
 
 
 def _get_hp(hp: dict, key: str, default: Any) -> Any:
