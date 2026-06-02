@@ -38,10 +38,15 @@ export interface EvaluateResponse {
   feature_importance: Record<string, number> | null
 }
 
-interface OptimizeResponse {
+export interface OptimizeResponse {
   success: boolean
   best_params: Record<string, unknown>
-  best_score: number | null
+  best_score: number
+  baseline_score: number
+  improvement: number
+  trials_run: number
+  model_type: string
+  strategy: string
 }
 
 export const modelApi = {
@@ -54,9 +59,15 @@ export const modelApi = {
   evaluate: (projectId: string) =>
     apiRequest<EvaluateResponse>(`/model/evaluate/${projectId}`),
 
-  optimize: (projectId: string, params: Record<string, unknown>) =>
+  optimize: (projectId: string, config: {
+    strategy: string
+    n_trials: number
+    test_size?: number
+    param_ranges?: Record<string, [number, number]>
+    param_choices?: Record<string, string[]>
+  }) =>
     apiRequest<OptimizeResponse>(`/model/optimize/${projectId}`, {
       method: 'POST',
-      body: JSON.stringify({ params }),
+      body: JSON.stringify(config),
     }),
 }
