@@ -1,3 +1,5 @@
+import gzip
+import base64
 import json
 import redis.asyncio as aioredis
 import pandas as pd
@@ -17,20 +19,34 @@ def get_redis() -> aioredis.Redis:
     return _redis
 
 
+def _compress(s: str) -> str:
+    """gzip-compress a string and return base64-encoded result (stays string-safe for Redis)."""
+    return base64.b64encode(gzip.compress(s.encode(), compresslevel=6)).decode()
+
+
+def _decompress(s: str) -> str:
+    """Reverse of _compress. Falls back to raw string for legacy uncompressed values."""
+    try:
+        return gzip.decompress(base64.b64decode(s.encode())).decode()
+    except Exception:
+        return s
+
+
 async def get_dataframe(project_id: str) -> pd.DataFrame | None:
     """Fetches the project DataFrame from Redis. Returns None if not cached."""
     r = get_redis()
     data = await r.get(f"df:{project_id}")
     if data is None:
         return None
-    return pd.read_json(StringIO(data), orient="split")
+    return pd.read_json(StringIO(_decompress(data)), orient="split")
 
 
 async def set_dataframe(project_id: str, df: pd.DataFrame, ttl: int = 86400) -> None:
-    """Writes a DataFrame to Redis with a TTL and invalidates derived caches."""
+    """Writes a gzip-compressed DataFrame to Redis and invalidates derived caches."""
+    payload = _compress(df.to_json(orient="split"))
     r = get_redis()
     pipe = r.pipeline()
-    pipe.setex(f"df:{project_id}", ttl, df.to_json(orient="split"))
+    pipe.setex(f"df:{project_id}", ttl, payload)
     pipe.delete(f"analysis:{project_id}", f"correlation:{project_id}")
     await pipe.execute()
 
