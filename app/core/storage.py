@@ -36,7 +36,9 @@ async def upload_dataset(project_id: str, content: bytes) -> None:
             headers={**_headers(), "Content-Type": "text/csv", "x-upsert": "true"},
             timeout=_TIMEOUT,
         )
-        r.raise_for_status()
+        if not r.ok:
+            logger.error(f"Storage upload failed {r.status_code}: {r.text}")
+            r.raise_for_status()
 
     await asyncio.to_thread(_run)
     logger.info(f"Uploaded dataset to storage for project {project_id}")
