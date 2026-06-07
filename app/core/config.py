@@ -16,6 +16,8 @@ class Settings(BaseSettings):
 
     SUPABASE_URL: str = ""
     SUPABASE_JWT_SECRET: str = ""
+    SUPABASE_SERVICE_ROLE_KEY: str = ""
+    SUPABASE_STORAGE_BUCKET: str = "truss-dataset-storage"
 
     REDIS_URL: str = ""
 

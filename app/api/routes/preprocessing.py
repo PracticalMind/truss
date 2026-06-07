@@ -12,6 +12,7 @@ from app.core.redis import (
     get_correlation_cache, set_correlation_cache,
     get_column_tags, set_column_tags,
 )
+from app.core.storage import get_or_restore_dataframe
 from app.services.db import get_db
 from app.services.models import User, Project, PipelineState
 from app.services.ml_pipeline import (
@@ -49,7 +50,7 @@ async def _load_df_or_404(project_id: str, user: User, db: AsyncSession) -> pd.D
     if result.scalar_one_or_none() is None:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    df = await get_dataframe(project_id)
+    df = await get_or_restore_dataframe(project_id)
     if df is None:
         raise HTTPException(status_code=404, detail="Project data not found in cache. Please re-upload.")
     return df

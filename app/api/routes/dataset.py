@@ -8,7 +8,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.core.auth import get_current_user
-from app.core.redis import get_dataframe, set_dataframe, get_analysis_cache, set_analysis_cache, set_column_tags
+from app.core.redis import set_dataframe, get_analysis_cache, set_analysis_cache, set_column_tags
+from app.core.storage import upload_dataset as storage_upload, get_or_restore_dataframe
 from app.services.db import get_db
 from app.services.models import User, Project
 from app.services.ml_pipeline import df_to_payload, analyze_dataframe
@@ -59,6 +60,7 @@ async def upload_dataset(
 
     await set_dataframe(project_id, df)
     await set_column_tags(project_id, {})
+    await storage_upload(project_id, content)
 
     columns = list(df.columns)
     shape = [len(df), len(columns)]
@@ -92,7 +94,7 @@ async def analyze_dataset(
     if result.scalar_one_or_none() is None:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    df = await get_dataframe(project_id)
+    df = await get_or_restore_dataframe(project_id)
     if df is None:
         raise HTTPException(status_code=404, detail="Project data not found in cache. Please re-upload.")
 
@@ -121,7 +123,7 @@ async def dataset_info(
     if result.scalar_one_or_none() is None:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    df = await get_dataframe(project_id)
+    df = await get_or_restore_dataframe(project_id)
     if df is None:
         raise HTTPException(status_code=404, detail="Project data not found in cache. Please re-upload.")
 
