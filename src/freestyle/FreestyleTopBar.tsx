@@ -18,6 +18,7 @@ interface FreestyleTopBarProps {
 const PIPELINE_DROPDOWN_STEPS: { id: PipelineStep; label: string }[] = [
   { id: 'missing-values', label: 'Missing Values' },
   { id: 'outliers',       label: 'Outliers' },
+  { id: 'filter-rows',    label: 'Filter Rows' },
   { id: 'encoding',       label: 'Encoding' },
   { id: 'correlation',    label: 'Correlation' },
   { id: 'scaling',        label: 'Scaling' },
@@ -38,6 +39,7 @@ const STEP_LABELS: Partial<Record<PipelineStep, string>> = {
   'upload':         'Upload',
   'analyze':        'Analyze',
   'export':         'Export',
+  'filter-rows':    'Filter Rows',
 }
 
 type OpenMenu = 'hamburger' | 'steps' | null

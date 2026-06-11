@@ -82,4 +82,22 @@ export const preprocessingApi = {
       method: 'POST',
       body: JSON.stringify({ columns }),
     }),
+
+  renameColumn: (projectId: string, oldName: string, newName: string) =>
+    apiRequest<DatasetInfo>(`/preprocessing/rename-column/${projectId}`, {
+      method: 'POST',
+      body: JSON.stringify({ old_name: oldName, new_name: newName }),
+    }),
+
+  dropDuplicates: (projectId: string) =>
+    apiRequest<DatasetInfo>(`/preprocessing/filter-rows/${projectId}`, {
+      method: 'POST',
+      body: JSON.stringify({ operation: 'drop_duplicates' }),
+    }),
+
+  filterRows: (projectId: string, column: string, operator: string, value: string) =>
+    apiRequest<DatasetInfo>(`/preprocessing/filter-rows/${projectId}`, {
+      method: 'POST',
+      body: JSON.stringify({ operation: 'filter', column, operator, value }),
+    }),
 }

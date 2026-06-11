@@ -24,7 +24,7 @@ interface FreestyleLayoutProps {
 //   mixed     — drawer for settings, overlay for results (Outliers, Correlation)
 //   view      — overlay only, top bar button (Analyze)
 
-const DRAWER_STEPS = new Set<PipelineStep>(['missing-values', 'outliers', 'encoding', 'scaling', 'training', 'correlation', 'evaluation', 'optimization', 'export'])
+const DRAWER_STEPS = new Set<PipelineStep>(['missing-values', 'outliers', 'encoding', 'scaling', 'training', 'correlation', 'evaluation', 'optimization', 'export', 'filter-rows'])
 
 const STEP_STATUS_TEXT: Partial<Record<PipelineStep, string>> = {
   'missing-values': 'Select a handling strategy and click Apply & Update Preview.',
@@ -37,6 +37,7 @@ const STEP_STATUS_TEXT: Partial<Record<PipelineStep, string>> = {
   'evaluation':     'Review model performance metrics and feature importance.',
   'optimization':   'Run hyperparameter search to improve model performance.',
   'export':         'Download predictions CSV or the serialized model file.',
+  'filter-rows':    'Remove rows by condition or drop exact duplicates.',
 }
 
 type OverlayState =

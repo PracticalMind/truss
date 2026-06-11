@@ -1,6 +1,6 @@
-import { useState } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Trash2 } from 'lucide-react'
+import { Trash2, Pencil } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { datasetApi } from '../services/api/dataset'
 import { preprocessingApi } from '../services/api/preprocessing'
@@ -21,6 +21,9 @@ export default function FreestyleDataTable({ projectId, activeStep, onUploadRequ
   const qc = useQueryClient()
   const [hoveredCol, setHoveredCol] = useState<string | null>(null)
   const [confirmCol, setConfirmCol] = useState<string | null>(null)
+  const [renamingCol, setRenamingCol] = useState<string | null>(null)
+  const [renameValue, setRenameValue] = useState('')
+  const renameInputRef = useRef<HTMLInputElement>(null)
 
   const { data: analyzeData, isLoading } = useQuery({
     queryKey: ['analyze', projectId],
@@ -40,6 +43,39 @@ export default function FreestyleDataTable({ projectId, activeStep, onUploadRequ
       setConfirmCol(null)
     },
   })
+
+  const renameMutation = useMutation({
+    mutationFn: ({ oldName, newName }: { oldName: string; newName: string }) =>
+      preprocessingApi.renameColumn(projectId, oldName, newName),
+    onSuccess: (_, { oldName, newName }) => {
+      qc.invalidateQueries({ queryKey: ['analyze', projectId] })
+      toast.success(`"${oldName}" → "${newName}"`)
+      setRenamingCol(null)
+    },
+    onError: (err: Error) => {
+      toast.error(err.message)
+    },
+  })
+
+  useEffect(() => {
+    if (renamingCol) renameInputRef.current?.focus()
+  }, [renamingCol])
+
+  const startRename = (col: string) => {
+    setRenamingCol(col)
+    setRenameValue(col)
+    setHoveredCol(null)
+    setConfirmCol(null)
+  }
+
+  const commitRename = () => {
+    const trimmed = renameValue.trim()
+    if (!trimmed || trimmed === renamingCol) {
+      setRenamingCol(null)
+      return
+    }
+    renameMutation.mutate({ oldName: renamingCol!, newName: trimmed })
+  }
 
   const columns = analyzeData?.dataset_info.columns ?? []
   const rows = analyzeData?.dataset_info.data ?? []
@@ -83,6 +119,7 @@ export default function FreestyleDataTable({ projectId, activeStep, onUploadRequ
             {columns.map(col => {
               const isHovered = hoveredCol === col
               const isConfirm = confirmCol === col
+              const isRenaming = renamingCol === col
               const isHighlighted = highlightedCols.has(col)
               const isDropping = dropMutation.isPending && dropMutation.variables === col
 
@@ -94,17 +131,33 @@ export default function FreestyleDataTable({ projectId, activeStep, onUploadRequ
                     color: isConfirm ? '#ef4444' : isHighlighted ? '#f97316' : isHovered ? '#e2e8f0' : '#4a5568',
                     backgroundColor: isConfirm
                       ? 'rgba(239,68,68,0.08)'
+                      : isRenaming
+                      ? 'rgba(99,102,241,0.08)'
                       : isHighlighted
                       ? 'rgba(249,115,22,0.06)'
                       : '#0d1117',
                   }}
-                  onMouseEnter={() => { if (!confirmCol) setHoveredCol(col) }}
+                  onMouseEnter={() => { if (!confirmCol && !renamingCol) setHoveredCol(col) }}
                   onMouseLeave={() => setHoveredCol(null)}
                 >
                   <div className="flex items-center gap-1.5">
-                    <span>{col}</span>
+                    {isRenaming ? (
+                      <input
+                        ref={renameInputRef}
+                        value={renameValue}
+                        onChange={e => setRenameValue(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') commitRename()
+                          if (e.key === 'Escape') setRenamingCol(null)
+                        }}
+                        onBlur={commitRename}
+                        disabled={renameMutation.isPending}
+                        className="bg-transparent border-b border-[#6366f1] outline-none text-[#e2e8f0] text-[10px] font-mono w-28 min-w-0"
+                      />
+                    ) : (
+                      <span onDoubleClick={() => startRename(col)} title="Double-click to rename">{col}</span>
+                    )}
 
-                    {/* Confirm state: show confirm/cancel inline */}
                     {isConfirm ? (
                       <div className="flex items-center gap-1 ml-1">
                         <button
@@ -121,14 +174,23 @@ export default function FreestyleDataTable({ projectId, activeStep, onUploadRequ
                           ✕
                         </button>
                       </div>
-                    ) : isHovered ? (
-                      <button
-                        onClick={() => { setConfirmCol(col); setHoveredCol(null) }}
-                        className="text-[#ef4444] hover:text-[#dc2626] opacity-80 hover:opacity-100 transition-all flex-shrink-0"
-                        title={`Drop column "${col}"`}
-                      >
-                        <Trash2 size={11} />
-                      </button>
+                    ) : isHovered && !isRenaming ? (
+                      <div className="flex items-center gap-1">
+                        <button
+                          onClick={() => startRename(col)}
+                          className="text-[#6366f1] hover:text-[#818cf8] opacity-80 hover:opacity-100 transition-all flex-shrink-0"
+                          title={`Rename "${col}"`}
+                        >
+                          <Pencil size={10} />
+                        </button>
+                        <button
+                          onClick={() => { setConfirmCol(col); setHoveredCol(null) }}
+                          className="text-[#ef4444] hover:text-[#dc2626] opacity-80 hover:opacity-100 transition-all flex-shrink-0"
+                          title={`Drop column "${col}"`}
+                        >
+                          <Trash2 size={11} />
+                        </button>
+                      </div>
                     ) : null}
                   </div>
                 </th>
