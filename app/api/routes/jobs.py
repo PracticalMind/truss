@@ -1,12 +1,12 @@
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
-import uuid
 
 from app.core.auth import get_current_user
 from app.services.db import get_db
-from app.services.models import User, MLJob
+from app.services.models import User, MLJob, Project
 from app.schemas.job import JobResponse
+from app.utils.uuid_helpers import parse_project_id
 
 router = APIRouter(prefix="/jobs", tags=["jobs"])
 
@@ -17,8 +17,12 @@ async def get_job_status(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> MLJob:
-    """Returns job status. Reads from DB until Celery integration is added."""
-    result = await db.execute(select(MLJob).where(MLJob.id == uuid.UUID(job_id)))
+    """Returns job status. Ownership verified via project membership."""
+    result = await db.execute(
+        select(MLJob)
+        .join(Project, Project.id == MLJob.project_id)
+        .where(MLJob.id == parse_project_id(job_id), Project.user_id == current_user.id)
+    )
     job = result.scalar_one_or_none()
     if job is None:
         raise HTTPException(status_code=404, detail="Job not found")

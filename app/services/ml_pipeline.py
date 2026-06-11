@@ -295,11 +295,15 @@ def scale_columns(
   return df_new
 
 
-def compute_correlation(df: pd.DataFrame) -> Tuple[Dict[str, Dict[str, float]], List[str]]:
+def compute_correlation(
+  df: pd.DataFrame,
+  method: str = "pearson",
+) -> Tuple[Dict[str, Dict[str, float]], List[str]]:
   numeric_df = df.select_dtypes(include=[np.number])
   if numeric_df.empty:
     return {}, []
-  corr = numeric_df.corr()
+  valid_methods = {"pearson", "spearman", "kendall"}
+  corr = numeric_df.corr(method=method if method in valid_methods else "pearson")
   matrix: Dict[str, Dict[str, float]] = {}
   for col1 in corr.columns:
     matrix[col1] = {}

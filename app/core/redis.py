@@ -41,20 +41,33 @@ async def get_dataframe(project_id: str) -> pd.DataFrame | None:
     return pd.read_json(StringIO(_decompress(data)), orient="split")
 
 
+async def _delete_correlation_keys(project_id: str) -> None:
+    """Deletes all correlation cache keys for a project (all methods)."""
+    r = get_redis()
+    keys = await r.keys(f"correlation:{project_id}:*")
+    if keys:
+        await r.delete(*keys)
+
+
 async def set_dataframe(project_id: str, df: pd.DataFrame, ttl: int = 86400) -> None:
     """Writes a gzip-compressed DataFrame to Redis and invalidates derived caches."""
     payload = _compress(df.to_json(orient="split"))
     r = get_redis()
     pipe = r.pipeline()
     pipe.setex(f"df:{project_id}", ttl, payload)
-    pipe.delete(f"analysis:{project_id}", f"correlation:{project_id}")
+    pipe.delete(f"analysis:{project_id}")
     await pipe.execute()
+    await _delete_correlation_keys(project_id)
 
 
 async def delete_dataframe(project_id: str) -> None:
     """Removes the project DataFrame and all derived cache keys from Redis."""
     r = get_redis()
-    await r.delete(f"df:{project_id}", f"meta:{project_id}", f"analysis:{project_id}", f"correlation:{project_id}", f"tags:{project_id}")
+    corr_keys = await r.keys(f"correlation:{project_id}:*")
+    keys_to_delete = [f"df:{project_id}", f"meta:{project_id}", f"analysis:{project_id}", f"tags:{project_id}"]
+    if corr_keys:
+        keys_to_delete.extend(corr_keys)
+    await r.delete(*keys_to_delete)
 
 
 async def get_analysis_cache(project_id: str) -> list[Any] | None:
@@ -72,19 +85,19 @@ async def set_analysis_cache(project_id: str, analysis: list[Any], ttl: int = 86
     await r.setex(f"analysis:{project_id}", ttl, json.dumps(analysis))
 
 
-async def get_correlation_cache(project_id: str) -> dict | None:
+async def get_correlation_cache(project_id: str, method: str = "pearson") -> dict | None:
     """Returns cached correlation matrix or None if not cached."""
     r = get_redis()
-    data = await r.get(f"correlation:{project_id}")
+    data = await r.get(f"correlation:{project_id}:{method}")
     if data is None:
         return None
     return json.loads(data)
 
 
-async def set_correlation_cache(project_id: str, payload: dict, ttl: int = 86400) -> None:
-    """Caches correlation matrix for the given project."""
+async def set_correlation_cache(project_id: str, payload: dict, method: str = "pearson", ttl: int = 86400) -> None:
+    """Caches correlation matrix for the given project and method."""
     r = get_redis()
-    await r.setex(f"correlation:{project_id}", ttl, json.dumps(payload))
+    await r.setex(f"correlation:{project_id}:{method}", ttl, json.dumps(payload))
 
 
 async def get_column_tags(project_id: str) -> dict[str, list[str]]:

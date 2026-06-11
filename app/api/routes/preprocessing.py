@@ -1,4 +1,6 @@
+import asyncio
 import logging
+from functools import partial
 
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException
@@ -344,19 +346,25 @@ async def drop_columns(
 @router.get("/correlation/{project_id}", response_model=CorrelationResponse)
 async def correlation(
     project_id: str,
+    method: str = "pearson",
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> dict:
-    """Computes the Pearson correlation matrix for all numeric columns."""
+    """Computes the correlation matrix for all numeric columns using the specified method."""
+    if method not in ("pearson", "spearman", "kendall"):
+        raise HTTPException(status_code=400, detail="method must be pearson, spearman, or kendall")
+
     df = await _load_df_or_404(project_id, current_user, db)
 
-    cached = await get_correlation_cache(project_id)
+    cache_key_method = method
+    cached = await get_correlation_cache(project_id, cache_key_method)
     if cached is not None:
         return cached
 
-    matrix, cols = compute_correlation(df)
-    payload = {"correlation_matrix": matrix, "columns": cols}
-    await set_correlation_cache(project_id, payload)
+    loop = asyncio.get_running_loop()
+    matrix, cols = await loop.run_in_executor(None, partial(compute_correlation, df, method))
+    payload = {"correlation_matrix": matrix, "columns": cols, "method": method}
+    await set_correlation_cache(project_id, payload, cache_key_method)
     return payload
 
 
