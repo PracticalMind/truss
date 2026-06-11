@@ -58,7 +58,9 @@ export type PipelineStep =
   | 'evaluation'
   | 'optimization'
   | 'export'
-  | 'filter-rows';
+  | 'filter-rows'
+  | 'feature-engineering'
+  | 'feature-selection';
 
 export type AppPage = 'dashboard' | 'pipeline' | 'projects' | 'settings';
 

@@ -6,22 +6,27 @@ import { preprocessingApi } from '../../services/api/preprocessing'
 
 interface Props { projectId: string; onApplied: () => void }
 
-type NumMethod = 'mean' | 'median' | 'mode' | 'drop' | 'none'
-type CatMethod = 'mode' | 'drop' | 'none'
-type ColMethod = 'mean' | 'median' | 'mode' | 'drop' | 'none'
+type NumMethod = 'mean' | 'median' | 'mode' | 'drop' | 'none' | 'ffill' | 'bfill' | 'constant'
+type CatMethod = 'mode' | 'drop' | 'none' | 'ffill' | 'bfill'
+type ColMethod = 'mean' | 'median' | 'mode' | 'drop' | 'none' | 'ffill' | 'bfill'
 type PanelMode = 'global' | 'per_column'
 
 const NUM_OPTS: { value: NumMethod; label: string }[] = [
-  { value: 'none',   label: 'Skip' },
-  { value: 'mean',   label: 'Mean' },
-  { value: 'median', label: 'Median' },
-  { value: 'mode',   label: 'Mode' },
-  { value: 'drop',   label: 'Drop Rows' },
+  { value: 'none',     label: 'Skip' },
+  { value: 'mean',     label: 'Mean' },
+  { value: 'median',   label: 'Median' },
+  { value: 'mode',     label: 'Mode' },
+  { value: 'ffill',    label: 'Forward Fill' },
+  { value: 'bfill',    label: 'Backward Fill' },
+  { value: 'constant', label: 'Constant' },
+  { value: 'drop',     label: 'Drop Rows' },
 ]
 const CAT_OPTS: { value: CatMethod; label: string }[] = [
-  { value: 'none', label: 'Skip' },
-  { value: 'mode', label: 'Mode' },
-  { value: 'drop', label: 'Drop Rows' },
+  { value: 'none',  label: 'Skip' },
+  { value: 'mode',  label: 'Mode' },
+  { value: 'ffill', label: 'Forward Fill' },
+  { value: 'bfill', label: 'Backward Fill' },
+  { value: 'drop',  label: 'Drop Rows' },
 ]
 // Per-column options split by type — categorical never gets mean/median
 const NUM_COL_OPTS: { value: ColMethod; label: string }[] = [
@@ -29,12 +34,16 @@ const NUM_COL_OPTS: { value: ColMethod; label: string }[] = [
   { value: 'mean',   label: 'Mean' },
   { value: 'median', label: 'Median' },
   { value: 'mode',   label: 'Mode' },
+  { value: 'ffill',  label: 'Fwd Fill' },
+  { value: 'bfill',  label: 'Bwd Fill' },
   { value: 'drop',   label: 'Drop Rows' },
 ]
 const CAT_COL_OPTS: { value: ColMethod; label: string }[] = [
-  { value: 'none', label: 'Skip' },
-  { value: 'mode', label: 'Mode' },
-  { value: 'drop', label: 'Drop Rows' },
+  { value: 'none',  label: 'Skip' },
+  { value: 'mode',  label: 'Mode' },
+  { value: 'ffill', label: 'Fwd Fill' },
+  { value: 'bfill', label: 'Bwd Fill' },
+  { value: 'drop',  label: 'Drop Rows' },
 ]
 
 export default function MissingValuesPanel({ projectId, onApplied }: Props) {
@@ -43,6 +52,7 @@ export default function MissingValuesPanel({ projectId, onApplied }: Props) {
   const [numMethod, setNumMethod] = useState<NumMethod>('none')
   const [catMethod, setCatMethod] = useState<CatMethod>('none')
   const [colMethods, setColMethods] = useState<Record<string, ColMethod>>({})
+  const [constantValue, setConstantValue] = useState('')
 
   const { data } = useQuery({
     queryKey: ['analyze', projectId],
@@ -59,19 +69,21 @@ export default function MissingValuesPanel({ projectId, onApplied }: Props) {
   const totalCells = (data?.dataset_info.shape[0] ?? 0) * (allCols.length || 1)
   const rate = totalCells > 0 ? ((totalMissing / totalCells) * 100).toFixed(1) : '0.0'
 
+  const resolvedNumMethod = numMethod === 'constant' ? `constant:${constantValue}` : numMethod
   const allSkipped = panelMode === 'global' && numMethod === 'none' && catMethod === 'none'
+  const constantEmpty = numMethod === 'constant' && constantValue.trim() === ''
 
   const applyMutation = useMutation({
     mutationFn: () => {
       if (panelMode === 'per_column') {
         return preprocessingApi.missingValues(projectId, {
-          numerical_method: numMethod,
+          numerical_method: resolvedNumMethod,
           categorical_method: catMethod,
           column_methods: Object.keys(colMethods).length > 0 ? colMethods : null,
         })
       }
       return preprocessingApi.missingValues(projectId, {
-        numerical_method: numMethod,
+        numerical_method: resolvedNumMethod,
         categorical_method: catMethod,
       })
     },
@@ -98,12 +110,21 @@ export default function MissingValuesPanel({ projectId, onApplied }: Props) {
           <>
             <Section label="Numeric Columns">
               {NUM_OPTS.map(o => (
-                <OptionCard key={o.value} selected={numMethod === o.value} label={o.label} desc='' onClick={() => setNumMethod(o.value)} />
+                <OptionCard key={o.value} selected={numMethod === o.value} label={o.label} desc='' onClick={() => setNumMethod(o.value as NumMethod)} />
               ))}
+              {numMethod === 'constant' && (
+                <input
+                  type="text"
+                  value={constantValue}
+                  onChange={e => setConstantValue(e.target.value)}
+                  placeholder="Fill value (e.g. 0)"
+                  className="w-full px-3 py-2 bg-[#111827] border border-[#f97316] rounded-lg text-xs text-white font-mono placeholder-[#374151] outline-none"
+                />
+              )}
             </Section>
             <Section label="Categorical Columns">
               {CAT_OPTS.map(o => (
-                <OptionCard key={o.value} selected={catMethod === o.value} label={o.label} desc='' onClick={() => setCatMethod(o.value)} />
+                <OptionCard key={o.value} selected={catMethod === o.value} label={o.label} desc='' onClick={() => setCatMethod(o.value as CatMethod)} />
               ))}
             </Section>
           </>
@@ -147,10 +168,11 @@ export default function MissingValuesPanel({ projectId, onApplied }: Props) {
       <PanelFooter
         onApply={() => applyMutation.mutate()}
         pending={applyMutation.isPending}
-        disabled={totalMissing === 0 || allSkipped}
+        disabled={totalMissing === 0 || allSkipped || constantEmpty}
         disabledHint={
           totalMissing === 0 ? 'No missing values found.' :
           allSkipped ? 'Both methods set to Skip — select a strategy.' :
+          constantEmpty ? 'Enter a fill value for the Constant method.' :
           undefined
         }
       />

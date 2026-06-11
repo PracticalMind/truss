@@ -100,4 +100,19 @@ export const preprocessingApi = {
       method: 'POST',
       body: JSON.stringify({ operation: 'filter', column, operator, value }),
     }),
+
+  featureEngineering: (projectId: string, body: Record<string, unknown>) =>
+    apiRequest<DatasetInfo>(`/preprocessing/feature-engineering/${projectId}`, {
+      method: 'POST',
+      body: JSON.stringify(body),
+    }),
+
+  featureSelection: (projectId: string, varianceThreshold = 0, correlationThreshold = 0.95) =>
+    apiRequest<{
+      low_variance_cols: string[]
+      high_correlation_pairs: { col_a: string; col_b: string; correlation: number }[]
+      suggested_drop: string[]
+      variance_threshold: number
+      correlation_threshold: number
+    }>(`/preprocessing/feature-selection/${projectId}?variance_threshold=${varianceThreshold}&correlation_threshold=${correlationThreshold}`),
 }
