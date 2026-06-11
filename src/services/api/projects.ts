@@ -9,6 +9,7 @@ interface ProjectUpdate {
   name?: string
   status?: string
   current_step?: string
+  view_mode?: string
 }
 
 export const projectsApi = {

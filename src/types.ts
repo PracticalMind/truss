@@ -5,6 +5,7 @@ export interface Project {
   filename: string | null
   status: 'active' | 'completed' | 'failed'
   current_step: PipelineStep
+  view_mode: ViewMode
   columns: string[] | null
   shape: [number, number] | null
   dtypes: Record<string, string> | null

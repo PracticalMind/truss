@@ -1,12 +1,12 @@
 import { useQuery } from '@tanstack/react-query'
 import { Activity, ArrowRight } from 'lucide-react'
 import { projectsApi } from '../services/api/projects'
-import type { AppPage, PipelineStep, Project } from '../types'
+import type { AppPage, PipelineStep, Project, ViewMode } from '../types'
 
 interface DashboardPageProps {
   onPageChange: (page: AppPage) => void
   onStepChange: (step: PipelineStep) => void
-  onOpenProject: (id: string, step: PipelineStep) => void
+  onOpenProject: (id: string, step: PipelineStep, mode: ViewMode) => void
   onNewProject: () => void
 }
 
@@ -87,7 +87,7 @@ export default function DashboardPage({ onOpenProject, onNewProject }: Dashboard
             return (
               <button
                 key={project.id}
-                onClick={() => onOpenProject(project.id, project.current_step ?? 'upload')}
+                onClick={() => onOpenProject(project.id, project.current_step ?? 'upload', project.view_mode ?? 'guided')}
                 className="w-full flex items-center gap-4 px-5 py-4 hover:bg-white/[0.02] transition-colors duration-150 text-left cursor-pointer"
               >
                 <div className="w-9 h-9 rounded-lg bg-[#1c2333] border border-[#2d3748] flex items-center justify-center flex-shrink-0">

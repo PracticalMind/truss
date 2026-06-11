@@ -3,10 +3,10 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Activity, Trash2, ArrowRight, Search } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { projectsApi } from '../services/api/projects'
-import type { PipelineStep, Project } from '../types'
+import type { PipelineStep, Project, ViewMode } from '../types'
 
 interface ProjectsPageProps {
-  onOpenProject: (id: string, step: PipelineStep) => void
+  onOpenProject: (id: string, step: PipelineStep, mode: ViewMode) => void
 }
 
 const STATUS_STYLES: Record<string, { dot: string; text: string; bg: string; label: string }> = {
@@ -178,7 +178,7 @@ export default function ProjectsPage({ onOpenProject }: ProjectsPageProps) {
                     <Trash2 size={13} />
                   </button>
                   <button
-                    onClick={() => onOpenProject(project.id, project.current_step ?? 'upload')}
+                    onClick={() => onOpenProject(project.id, project.current_step ?? 'upload', project.view_mode ?? 'guided')}
                     className="p-1.5 text-[#374151] hover:text-[#f97316] transition-colors rounded"
                   >
                     <ArrowRight size={13} />
