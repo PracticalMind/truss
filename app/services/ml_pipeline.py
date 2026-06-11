@@ -51,6 +51,12 @@ def analyze_dataframe(df: pd.DataFrame) -> List[Dict[str, Any]]:
     series = df[col]
     non_null = series.dropna()
     if non_null.empty:
+      analysis.append({
+        "column": col,
+        "type": "unknown",
+        "count": 0,
+        "warning": "all_null",
+      })
       continue
 
     if pd.api.types.is_numeric_dtype(non_null):
@@ -434,7 +440,8 @@ def optimize_hyperparams(
       if score > best_score:
         best_score = score
         best_params = params
-    except Exception:
+    except Exception as trial_exc:
+      logger.debug(f"Trial skipped for {model_type} with params {params}: {trial_exc}")
       continue
 
   return {"best_params": best_params, "best_score": best_score, "trials_run": trials_run}

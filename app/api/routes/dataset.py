@@ -1,4 +1,3 @@
-import uuid
 import logging
 from io import BytesIO
 
@@ -15,6 +14,7 @@ from app.services.models import User, Project
 from app.services.ml_pipeline import df_to_payload, analyze_dataframe
 from app.schemas.dataset import UploadResponse, AnalyzeResponse
 from app.utils.json_sanitize import sanitize_for_json
+from app.utils.uuid_helpers import parse_project_id
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ async def upload_dataset(
 
     result = await db.execute(
         select(Project).where(
-            Project.id == uuid.UUID(project_id),
+            Project.id == parse_project_id(project_id),
             Project.user_id == current_user.id,
         )
     )
@@ -60,7 +60,10 @@ async def upload_dataset(
 
     await set_dataframe(project_id, df)
     await set_column_tags(project_id, {})
-    await storage_upload(project_id, content)
+    try:
+        await storage_upload(project_id, content)
+    except Exception as storage_exc:
+        logger.error(f"Storage persist failed for project {project_id}: {storage_exc}. Data is in Redis only.")
 
     columns = list(df.columns)
     shape = [len(df), len(columns)]
@@ -87,7 +90,7 @@ async def analyze_dataset(
     """Returns per-column statistics for the cached DataFrame."""
     result = await db.execute(
         select(Project).where(
-            Project.id == uuid.UUID(project_id),
+            Project.id == parse_project_id(project_id),
             Project.user_id == current_user.id,
         )
     )
@@ -116,7 +119,7 @@ async def dataset_info(
     """Returns the current DataFrame snapshot (columns, shape, missing values)."""
     result = await db.execute(
         select(Project).where(
-            Project.id == uuid.UUID(project_id),
+            Project.id == parse_project_id(project_id),
             Project.user_id == current_user.id,
         )
     )

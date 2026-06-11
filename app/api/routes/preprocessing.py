@@ -1,4 +1,3 @@
-import uuid
 import logging
 
 import pandas as pd
@@ -33,6 +32,7 @@ from app.schemas.preprocessing import (
     ColumnTagsResponse,
 )
 from app.utils.json_sanitize import sanitize_for_json
+from app.utils.uuid_helpers import parse_project_id
 
 logger = logging.getLogger(__name__)
 
@@ -43,7 +43,7 @@ async def _load_df_or_404(project_id: str, user: User, db: AsyncSession) -> pd.D
     """Fetches the project DataFrame from Redis, verifying ownership. Raises 404 if not found."""
     result = await db.execute(
         select(Project).where(
-            Project.id == uuid.UUID(project_id),
+            Project.id == parse_project_id(project_id),
             Project.user_id == user.id,
         )
     )
@@ -66,7 +66,7 @@ async def _save_pipeline_state(
     """Persists the step config and a data snapshot to pipeline_states."""
     snapshot = sanitize_for_json({"data": df.values.tolist(), "columns": list(df.columns)})
     state = PipelineState(
-        project_id=uuid.UUID(project_id),
+        project_id=parse_project_id(project_id),
         step_name=step_name,
         config=config,
         data_snapshot=snapshot,
@@ -337,7 +337,7 @@ async def drop_columns(
     df_new = df.drop(columns=columns)
     await set_dataframe(project_id, df_new)
     await _update_column_tags(project_id, "drop_columns", {"dropped_columns": columns}, df, df_new)
-    await _save_pipeline_state(project_id, "correlation", {"dropped_columns": columns}, df_new, db)
+    await _save_pipeline_state(project_id, "drop_columns", {"dropped_columns": columns}, df_new, db)
     return sanitize_for_json(df_to_payload(df_new, project_id))
 
 
@@ -369,7 +369,7 @@ async def column_tags(
     """Returns the transformation tags applied to each column in the current pipeline state."""
     result = await db.execute(
         select(Project).where(
-            Project.id == uuid.UUID(project_id),
+            Project.id == parse_project_id(project_id),
             Project.user_id == current_user.id,
         )
     )

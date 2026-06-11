@@ -1,5 +1,4 @@
 import re
-import uuid
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -12,6 +11,7 @@ from app.core.redis import delete_dataframe
 from app.services.db import get_db
 from app.services.models import User, Project
 from app.schemas.project import ProjectCreate, ProjectUpdate, ProjectResponse
+from app.utils.uuid_helpers import parse_project_id
 
 router = APIRouter(prefix="/projects", tags=["projects"])
 
@@ -65,7 +65,7 @@ async def get_project(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> Project:
-    result = await db.execute(select(Project).where(Project.id == uuid.UUID(project_id)))
+    result = await db.execute(select(Project).where(Project.id == parse_project_id(project_id)))
     project = result.scalar_one_or_none()
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -81,7 +81,7 @@ async def update_project(
     db: AsyncSession = Depends(get_db),
 ) -> Project:
     """Updates name, status, and/or current_step of a project."""
-    result = await db.execute(select(Project).where(Project.id == uuid.UUID(project_id)))
+    result = await db.execute(select(Project).where(Project.id == parse_project_id(project_id)))
     project = result.scalar_one_or_none()
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
@@ -108,12 +108,12 @@ async def delete_project(
     db: AsyncSession = Depends(get_db),
 ) -> None:
     """Deletes the project and clears its Redis cache."""
-    result = await db.execute(select(Project).where(Project.id == uuid.UUID(project_id)))
+    result = await db.execute(select(Project).where(Project.id == parse_project_id(project_id)))
     project = result.scalar_one_or_none()
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
     _assert_owner(project, current_user)
 
     await delete_dataframe(project_id)
-    await db.execute(delete(Project).where(Project.id == uuid.UUID(project_id)))
+    await db.execute(delete(Project).where(Project.id == parse_project_id(project_id)))
     await db.commit()

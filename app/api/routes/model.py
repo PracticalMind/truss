@@ -1,5 +1,4 @@
 import io
-import uuid
 import asyncio
 import logging
 from functools import partial
@@ -13,12 +12,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.core.auth import get_current_user
-from app.core.redis import get_dataframe
+from app.core.storage import get_or_restore_dataframe
 from app.services.db import get_db
 from app.services.models import User, Project, TrainedModel
 from app.services.ml_pipeline import train_model, optimize_hyperparams
 from app.schemas.model import TrainRequest, TrainResponse, EvaluateResponse, OptimizeRequest, OptimizeResponse
 from app.utils.json_sanitize import sanitize_for_json
+from app.utils.uuid_helpers import parse_project_id
 
 logger = logging.getLogger(__name__)
 
@@ -35,7 +35,7 @@ async def start_training(
     """Trains the model synchronously and persists results to the database."""
     result = await db.execute(
         select(Project).where(
-            Project.id == uuid.UUID(project_id),
+            Project.id == parse_project_id(project_id),
             Project.user_id == current_user.id,
         )
     )
@@ -43,9 +43,9 @@ async def start_training(
     if project is None:
         raise HTTPException(status_code=404, detail="Project not found")
 
-    df = await get_dataframe(project_id)
+    df = await get_or_restore_dataframe(project_id)
     if df is None:
-        raise HTTPException(status_code=404, detail="Project data not found in cache. Please re-upload.")
+        raise HTTPException(status_code=404, detail="Project data not found. Please re-upload.")
 
     try:
         loop = asyncio.get_running_loop()
@@ -71,7 +71,7 @@ async def start_training(
 
     result_q = await db.execute(
         select(TrainedModel).where(
-            TrainedModel.project_id == uuid.UUID(project_id),
+            TrainedModel.project_id == parse_project_id(project_id),
             TrainedModel.is_best == True,  # noqa: E712
         )
     )
@@ -88,7 +88,7 @@ async def start_training(
         is_best = True
 
     model_row = TrainedModel(
-        project_id=uuid.UUID(project_id),
+        project_id=parse_project_id(project_id),
         model_type=body.model_type,
         target_column=body.target_column,
         task_type=task_type,
@@ -121,7 +121,7 @@ async def evaluate_model(
     """Returns metrics for all trained models, with the best model highlighted."""
     result = await db.execute(
         select(Project).where(
-            Project.id == uuid.UUID(project_id),
+            Project.id == parse_project_id(project_id),
             Project.user_id == current_user.id,
         )
     )
@@ -130,7 +130,7 @@ async def evaluate_model(
 
     models_result = await db.execute(
         select(TrainedModel)
-        .where(TrainedModel.project_id == uuid.UUID(project_id))
+        .where(TrainedModel.project_id == parse_project_id(project_id))
         .order_by(TrainedModel.created_at.desc())
     )
     models: List[TrainedModel] = list(models_result.scalars().all())
@@ -173,7 +173,7 @@ async def optimize_model(
     """Runs hyperparameter search on the best trained model for the project."""
     result = await db.execute(
         select(Project).where(
-            Project.id == uuid.UUID(project_id),
+            Project.id == parse_project_id(project_id),
             Project.user_id == current_user.id,
         )
     )
@@ -182,16 +182,16 @@ async def optimize_model(
 
     best_result = await db.execute(
         select(TrainedModel)
-        .where(TrainedModel.project_id == uuid.UUID(project_id), TrainedModel.is_best == True)  # noqa: E712
+        .where(TrainedModel.project_id == parse_project_id(project_id), TrainedModel.is_best == True)  # noqa: E712
         .order_by(TrainedModel.created_at.desc())
     )
     best_model = best_result.scalar_one_or_none()
     if best_model is None:
         raise HTTPException(status_code=404, detail="No trained model found. Complete the Training step first.")
 
-    df = await get_dataframe(project_id)
+    df = await get_or_restore_dataframe(project_id)
     if df is None:
-        raise HTTPException(status_code=404, detail="Project data not found in cache. Please re-upload.")
+        raise HTTPException(status_code=404, detail="Project data not found. Please re-upload.")
 
     model_type = best_model.model_type
     target_column = best_model.target_column
@@ -244,23 +244,23 @@ async def optimize_model(
 
 async def _get_best_model_and_df(project_id: str, current_user: User, db: AsyncSession):
     result = await db.execute(
-        select(Project).where(Project.id == uuid.UUID(project_id), Project.user_id == current_user.id)
+        select(Project).where(Project.id == parse_project_id(project_id), Project.user_id == current_user.id)
     )
     if result.scalar_one_or_none() is None:
         raise HTTPException(status_code=404, detail="Project not found")
 
     best_result = await db.execute(
         select(TrainedModel)
-        .where(TrainedModel.project_id == uuid.UUID(project_id), TrainedModel.is_best == True)  # noqa: E712
+        .where(TrainedModel.project_id == parse_project_id(project_id), TrainedModel.is_best == True)  # noqa: E712
         .order_by(TrainedModel.created_at.desc())
     )
     best_model = best_result.scalar_one_or_none()
     if best_model is None:
         raise HTTPException(status_code=404, detail="No trained model found. Complete the Training step first.")
 
-    df = await get_dataframe(project_id)
+    df = await get_or_restore_dataframe(project_id)
     if df is None:
-        raise HTTPException(status_code=404, detail="Project data not found in cache. Please re-upload.")
+        raise HTTPException(status_code=404, detail="Project data not found. Please re-upload.")
 
     return best_model, df
 
