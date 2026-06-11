@@ -22,7 +22,8 @@ import ProjectsPage from './pages/ProjectsPage'
 import LoginPage from './pages/LoginPage'
 import RegisterPage from './pages/RegisterPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
-import type { AppPage, PipelineStep } from './types'
+import FreestyleLayout from './freestyle/FreestyleLayout'
+import type { AppPage, PipelineStep, ViewMode } from './types'
 
 const STEP_TITLES: Record<PipelineStep, string> = {
   upload: 'Upload Dataset',
@@ -48,6 +49,7 @@ export default function App() {
   const [currentStep, setCurrentStep] = useState<PipelineStep>(() => {
     return (localStorage.getItem('truss_step') as PipelineStep | null) ?? 'upload'
   })
+  const [viewMode, setViewMode] = useState<ViewMode>('guided')
   const [authPage, setAuthPage] = useState<'landing' | 'login' | 'register' | 'reset'>('landing')
   const [activeProjectId, setActiveProjectId] = useState<string | null>(() => {
     return localStorage.getItem('truss_project_id')
@@ -67,7 +69,6 @@ export default function App() {
     localStorage.setItem('truss_page', currentPage)
   }, [currentPage])
 
-  // Clear persisted state on logout
   useEffect(() => {
     if (!user && !loading) {
       localStorage.removeItem('truss_project_id')
@@ -109,9 +110,10 @@ export default function App() {
     setCurrentPage('pipeline')
   }
 
-  const handleOpenProject = (projectId: string, step: PipelineStep = 'upload') => {
+  const handleOpenProject = (projectId: string, step: PipelineStep = 'upload', mode: ViewMode = 'guided') => {
     setActiveProjectId(projectId)
     setCurrentStep(step)
+    setViewMode(mode)
     setCurrentPage('pipeline')
   }
 
@@ -164,6 +166,34 @@ export default function App() {
     }
   }
 
+  // Freestyle mode: full-screen layout, no sidebar
+  if (currentPage === 'pipeline' && viewMode === 'freestyle') {
+    return (
+      <>
+        <FreestyleLayout
+          projectId={activeProjectId ?? ''}
+          currentStep={currentStep}
+          onStepChange={handleNext}
+          onPageChange={(page) => {
+            setViewMode('guided')
+            handlePageChange(page)
+          }}
+          onSwitchToGuided={() => setViewMode('guided')}
+          onNewProject={() => setShowCreateProject(true)}
+        />
+        {showCreateProject && (
+          <CreateProjectModal
+            onClose={() => setShowCreateProject(false)}
+            onCreated={(id, mode) => {
+              setShowCreateProject(false)
+              handleOpenProject(id, 'upload', mode)
+            }}
+          />
+        )}
+      </>
+    )
+  }
+
   return (
     <div className="bg-[#0d1117]" style={{ display: 'flex', height: '100vh', overflow: 'hidden' }}>
       <Sidebar
@@ -172,6 +202,8 @@ export default function App() {
         onPageChange={handlePageChange}
         onStepChange={handleStepChange}
         onBackToDashboard={() => handlePageChange('dashboard')}
+        viewMode={viewMode}
+        onSwitchToFreestyle={() => setViewMode('freestyle')}
       />
       <div className="flex flex-col" style={{ flex: 1, minWidth: 0, height: '100%', overflow: 'hidden' }}>
         <TopBar
@@ -187,9 +219,9 @@ export default function App() {
       {showCreateProject && (
         <CreateProjectModal
           onClose={() => setShowCreateProject(false)}
-          onCreated={(id) => {
+          onCreated={(id, mode) => {
             setShowCreateProject(false)
-            handleOpenProject(id, 'upload')
+            handleOpenProject(id, 'upload', mode)
           }}
         />
       )}

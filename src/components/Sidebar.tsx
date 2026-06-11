@@ -18,7 +18,7 @@ import {
   ChevronLeft,
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import type { PipelineStep, AppPage, StepStatus } from '../types';
+import type { PipelineStep, AppPage, StepStatus, ViewMode } from '../types';
 
 interface SidebarProps {
   currentPage: AppPage;
@@ -26,6 +26,8 @@ interface SidebarProps {
   onPageChange: (page: AppPage) => void;
   onStepChange: (step: PipelineStep) => void;
   onBackToDashboard: () => void;
+  viewMode?: ViewMode;
+  onSwitchToFreestyle?: () => void;
 }
 
 const PIPELINE_STEPS: { id: PipelineStep; label: string; icon: React.ReactNode }[] = [
@@ -62,7 +64,7 @@ function StepIcon({ status }: { status: StepStatus }) {
   return <Circle size={14} className="text-[#475569] flex-shrink-0" />;
 }
 
-export default function Sidebar({ currentPage, currentStep, onPageChange, onStepChange, onBackToDashboard }: SidebarProps) {
+export default function Sidebar({ currentPage, currentStep, onPageChange, onStepChange, onBackToDashboard, onSwitchToFreestyle }: SidebarProps) {
   const { signOut } = useAuth();
   const isInProject = currentPage === 'pipeline';
 
@@ -153,6 +155,19 @@ export default function Sidebar({ currentPage, currentStep, onPageChange, onStep
             );
           })}
         </nav>
+      )}
+
+      {/* Freestyle mode toggle — only in project context */}
+      {isInProject && onSwitchToFreestyle && (
+        <div className="px-3 pb-3 flex-shrink-0">
+          <button
+            onClick={onSwitchToFreestyle}
+            className="w-full flex items-center gap-2 py-1.5 pl-2 text-xs text-[#4a5568] hover:text-[#94a3b8] border border-[#1e2a3a] hover:border-[#2d3748] rounded transition-all duration-150"
+          >
+            <span className="text-[10px] font-mono">⚡</span>
+            Freestyle Mode
+          </button>
+        </div>
       )}
 
       {/* Spacer when in app context */}

@@ -62,6 +62,8 @@ export type AppPage = 'dashboard' | 'pipeline' | 'projects' | 'settings';
 
 export type StepStatus = 'completed' | 'active' | 'pending';
 
+export type ViewMode = 'guided' | 'freestyle';
+
 export interface PipelineStepConfig {
   id: PipelineStep;
   label: string;
