@@ -113,3 +113,16 @@ async def set_column_tags(project_id: str, tags: dict[str, list[str]], ttl: int 
     """Persists column transformation tags to Redis."""
     r = get_redis()
     await r.setex(f"tags:{project_id}", ttl, json.dumps(tags))
+
+
+async def acquire_training_lock(project_id: str, ttl: int = 300) -> bool:
+    """Sets a training lock for the project. Returns True if acquired, False if already locked."""
+    r = get_redis()
+    result = await r.set(f"training_lock:{project_id}", "1", ex=ttl, nx=True)
+    return result is True
+
+
+async def release_training_lock(project_id: str) -> None:
+    """Releases the training lock for the project."""
+    r = get_redis()
+    await r.delete(f"training_lock:{project_id}")

@@ -13,6 +13,7 @@ from sqlalchemy import select
 
 from app.core.auth import get_current_user
 from app.core.storage import get_or_restore_dataframe
+from app.core.redis import acquire_training_lock, release_training_lock
 from app.services.db import get_db
 from app.services.models import User, Project, TrainedModel
 from app.services.ml_pipeline import train_model, optimize_hyperparams
@@ -47,6 +48,9 @@ async def start_training(
     if df is None:
         raise HTTPException(status_code=404, detail="Project data not found. Please re-upload.")
 
+    if not await acquire_training_lock(project_id):
+        raise HTTPException(status_code=409, detail="Training already in progress for this project.")
+
     try:
         loop = asyncio.get_running_loop()
         _pipeline, task_type, metrics = await loop.run_in_executor(
@@ -66,6 +70,8 @@ async def start_training(
     except Exception as exc:
         logger.exception(f"Training failed for project {project_id}")
         raise HTTPException(status_code=500, detail=f"Training failed: {exc}")
+    finally:
+        await release_training_lock(project_id)
 
     sanitized_metrics = sanitize_for_json(metrics)
 
@@ -193,6 +199,9 @@ async def optimize_model(
     if df is None:
         raise HTTPException(status_code=404, detail="Project data not found. Please re-upload.")
 
+    if not await acquire_training_lock(project_id):
+        raise HTTPException(status_code=409, detail="Training or optimization already in progress for this project.")
+
     model_type = best_model.model_type
     target_column = best_model.target_column
     task_type = best_model.task_type
@@ -221,6 +230,8 @@ async def optimize_model(
     except Exception as exc:
         logger.exception(f"Optimization failed for project {project_id}")
         raise HTTPException(status_code=500, detail=f"Optimization failed: {exc}")
+    finally:
+        await release_training_lock(project_id)
 
     best_score = opt_result["best_score"]
     improvement = best_score - baseline_score

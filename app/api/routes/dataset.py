@@ -1,5 +1,7 @@
+import asyncio
 import logging
 from io import BytesIO
+from functools import partial
 
 import pandas as pd
 from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
@@ -41,7 +43,13 @@ async def upload_dataset(
         raise HTTPException(status_code=400, detail="File is empty")
 
     try:
-        df = pd.read_csv(BytesIO(content))
+        loop = asyncio.get_running_loop()
+        df = await asyncio.wait_for(
+            loop.run_in_executor(None, partial(pd.read_csv, BytesIO(content))),
+            timeout=30,
+        )
+    except asyncio.TimeoutError:
+        raise HTTPException(status_code=408, detail="CSV parsing timed out. The file may be malformed or too complex.")
     except pd.errors.ParserError:
         raise HTTPException(status_code=400, detail="Invalid CSV format")
 
