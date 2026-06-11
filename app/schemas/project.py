@@ -12,6 +12,7 @@ class ProjectUpdate(BaseModel):
     name: Optional[str] = None
     status: Optional[str] = None
     current_step: Optional[str] = None
+    view_mode: Optional[str] = None
 
 
 class ProjectResponse(BaseModel):
@@ -21,6 +22,7 @@ class ProjectResponse(BaseModel):
     filename: Optional[str] = None
     status: str
     current_step: str
+    view_mode: str = "guided"
     columns: Optional[List[str]] = None
     shape: Optional[List[int]] = None
     dtypes: Optional[dict] = None

@@ -93,6 +93,8 @@ async def update_project(
         project.status = body.status
     if body.current_step is not None:
         project.current_step = body.current_step
+    if body.view_mode is not None:
+        project.view_mode = body.view_mode
 
     await db.commit()
     await db.refresh(project)

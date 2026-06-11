@@ -27,6 +27,7 @@ class Project(Base):
     filename = Column(String, nullable=True)
     status = Column(String, default="active", nullable=False)
     current_step = Column(String, default="upload", nullable=False)
+    view_mode = Column(String, default="guided", nullable=False)
     columns = Column(JSON, nullable=True)
     shape = Column(ARRAY(Integer), nullable=True)
     dtypes = Column(JSON, nullable=True)
