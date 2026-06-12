@@ -1,0 +1,48 @@
+services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: truss
+      POSTGRES_USER: truss
+      POSTGRES_PASSWORD: truss_dev
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U truss"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  backend:
+    build: ./backend
+    ports:
+      - "8000:8000"
+    environment:
+      DATABASE_URL: postgresql+asyncpg://truss:truss_dev@postgres:5432/truss
+      AUTH_PROVIDER: local
+      STORAGE_PROVIDER: local
+      LOCAL_JWT_SECRET: dev-secret-change-in-production
+      LOCAL_STORAGE_PATH: /app/data/uploads
+      REDIS_URL: redis://redis:6379
+      BACKEND_CORS_ORIGINS: http://localhost:5173,http://localhost:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    volumes:
+      - ./backend/app:/app/app
+      - uploads_data:/app/data/uploads
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  uploads_data:

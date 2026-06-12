@@ -23,6 +23,7 @@ dependencies = [
     # Auth & Security
     "PyJWT>=2.8.0",
     "cryptography>=42.0.0",
+    "bcrypt>=4.0.0",
 
     # Caching
     "redis[asyncio]>=5.0.0",

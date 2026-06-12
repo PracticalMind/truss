@@ -1,3 +1,5 @@
+from contextlib import asynccontextmanager
+
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -8,8 +10,18 @@ from .api.routes import dataset, preprocessing, model, health, auth, projects, j
 setup_logging()
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    if settings.AUTH_PROVIDER == "local":
+        from .services.db import engine
+        from .services.models import Base
+        async with engine.begin() as conn:
+            await conn.run_sync(Base.metadata.create_all)
+    yield
+
+
 def get_application() -> FastAPI:
-    app = FastAPI(title=settings.PROJECT_NAME, version="2.0.0")
+    app = FastAPI(title=settings.PROJECT_NAME, version="2.0.0", lifespan=lifespan)
 
     origins = settings.BACKEND_CORS_ORIGINS or ["*"]
     app.add_middleware(

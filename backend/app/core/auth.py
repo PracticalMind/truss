@@ -1,4 +1,7 @@
 import uuid
+import datetime
+
+import bcrypt
 import jwt
 from jwt import PyJWKClient
 from fastapi import Depends, HTTPException
@@ -13,9 +16,10 @@ from app.services.models import User
 security = HTTPBearer()
 
 _jwks_client: PyJWKClient | None = None
-
 _ASYMMETRIC_ALGS = {"ES256", "ES384", "ES512", "RS256", "RS384", "RS512", "EdDSA"}
 
+
+# Supabase auth
 
 def _get_jwks_client() -> PyJWKClient:
     global _jwks_client
@@ -27,8 +31,8 @@ def _get_jwks_client() -> PyJWKClient:
     return _jwks_client
 
 
-def _decode_token(token: str) -> dict:
-    """Routes to JWKS (ES256/RS256/EdDSA) or legacy HS256 secret based on token alg header."""
+def _decode_supabase_token(token: str) -> dict:
+    """Decodes a Supabase JWT - supports both JWKS (asymmetric) and legacy HS256."""
     try:
         header = jwt.get_unverified_header(token)
     except jwt.DecodeError as exc:
@@ -53,13 +57,12 @@ def _decode_token(token: str) -> dict:
     )
 
 
-async def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Depends(security),
-    db: AsyncSession = Depends(get_db),
+async def _get_current_user_supabase(
+    credentials: HTTPAuthorizationCredentials,
+    db: AsyncSession,
 ) -> User:
-    """Verifies Supabase JWT and returns the authenticated user, creating them if first login."""
     try:
-        payload = _decode_token(credentials.credentials)
+        payload = _decode_supabase_token(credentials.credentials)
     except jwt.ExpiredSignatureError:
         raise HTTPException(status_code=401, detail="Token expired")
     except jwt.InvalidTokenError as exc:
@@ -86,3 +89,68 @@ async def get_current_user(
         await db.refresh(user)
 
     return user
+
+
+# Local auth
+
+def create_local_token(user_id: uuid.UUID, email: str) -> str:
+    """Issues a signed JWT for local auth mode."""
+    exp = datetime.datetime.utcnow() + datetime.timedelta(
+        days=settings.LOCAL_JWT_EXPIRE_DAYS
+    )
+    return jwt.encode(
+        {"sub": str(user_id), "email": email, "exp": exp},
+        settings.LOCAL_JWT_SECRET,
+        algorithm="HS256",
+    )
+
+
+def hash_password(plain: str) -> str:
+    return bcrypt.hashpw(plain.encode(), bcrypt.gensalt()).decode()
+
+
+def verify_password(plain: str, hashed: str) -> bool:
+    return bcrypt.checkpw(plain.encode(), hashed.encode())
+
+
+async def _get_current_user_local(
+    credentials: HTTPAuthorizationCredentials,
+    db: AsyncSession,
+) -> User:
+    try:
+        payload = jwt.decode(
+            credentials.credentials,
+            settings.LOCAL_JWT_SECRET,
+            algorithms=["HS256"],
+        )
+    except jwt.ExpiredSignatureError:
+        raise HTTPException(status_code=401, detail="Token expired")
+    except jwt.InvalidTokenError as exc:
+        raise HTTPException(status_code=401, detail=f"Invalid token: {exc}")
+
+    user_id_str: str | None = payload.get("sub")
+    if not user_id_str:
+        raise HTTPException(status_code=401, detail="Token missing subject")
+
+    try:
+        user_id = uuid.UUID(user_id_str)
+    except ValueError:
+        raise HTTPException(status_code=401, detail="Invalid user id in token")
+
+    result = await db.execute(select(User).where(User.id == user_id))
+    user = result.scalar_one_or_none()
+    if user is None:
+        raise HTTPException(status_code=401, detail="User not found")
+
+    return user
+
+
+# Public dependency
+
+async def get_current_user(
+    credentials: HTTPAuthorizationCredentials = Depends(security),
+    db: AsyncSession = Depends(get_db),
+) -> User:
+    if settings.AUTH_PROVIDER == "local":
+        return await _get_current_user_local(credentials, db)
+    return await _get_current_user_supabase(credentials, db)

@@ -1,6 +1,7 @@
 import asyncio
 import logging
 from io import BytesIO
+from pathlib import Path
 
 import pandas as pd
 import requests
@@ -12,42 +13,49 @@ logger = logging.getLogger(__name__)
 _TIMEOUT = 30
 
 
-def _headers() -> dict:
+# Supabase Storage
+
+def _supabase_headers() -> dict:
     return {
         "Authorization": f"Bearer {settings.SUPABASE_SERVICE_ROLE_KEY}",
         "apikey": settings.SUPABASE_SERVICE_ROLE_KEY,
     }
 
 
-def _object_url(project_id: str) -> str:
-    return f"{settings.SUPABASE_URL}/storage/v1/object/{settings.SUPABASE_STORAGE_BUCKET}/{project_id}.csv"
+def _supabase_object_url(project_id: str) -> str:
+    return (
+        f"{settings.SUPABASE_URL}/storage/v1/object"
+        f"/{settings.SUPABASE_STORAGE_BUCKET}/{project_id}.csv"
+    )
 
 
-def _delete_url() -> str:
+def _supabase_delete_url() -> str:
     return f"{settings.SUPABASE_URL}/storage/v1/object/{settings.SUPABASE_STORAGE_BUCKET}"
 
 
-async def upload_dataset(project_id: str, content: bytes) -> None:
-    """Uploads raw CSV bytes to Supabase Storage, overwriting any existing file."""
+async def _supabase_upload(project_id: str, content: bytes) -> None:
     def _run() -> None:
         r = requests.post(
-            _object_url(project_id),
+            _supabase_object_url(project_id),
             data=content,
-            headers={**_headers(), "Content-Type": "text/csv", "x-upsert": "true"},
+            headers={**_supabase_headers(), "Content-Type": "text/csv", "x-upsert": "true"},
             timeout=_TIMEOUT,
         )
         if not r.ok:
-            logger.error(f"Storage upload failed {r.status_code}: {r.text}")
+            logger.error(f"Supabase upload failed {r.status_code}: {r.text}")
             r.raise_for_status()
 
     await asyncio.to_thread(_run)
-    logger.info(f"Uploaded dataset to storage for project {project_id}")
+    logger.info(f"Uploaded dataset to Supabase Storage for project {project_id}")
 
 
-async def download_dataset(project_id: str) -> bytes | None:
-    """Downloads raw CSV bytes from Supabase Storage. Returns None if not found."""
+async def _supabase_download(project_id: str) -> bytes | None:
     def _run() -> bytes | None:
-        r = requests.get(_object_url(project_id), headers=_headers(), timeout=_TIMEOUT)
+        r = requests.get(
+            _supabase_object_url(project_id),
+            headers=_supabase_headers(),
+            timeout=_TIMEOUT,
+        )
         if r.status_code == 404:
             return None
         r.raise_for_status()
@@ -55,17 +63,16 @@ async def download_dataset(project_id: str) -> bytes | None:
 
     content = await asyncio.to_thread(_run)
     if content is not None:
-        logger.info(f"Restored dataset from storage for project {project_id}")
+        logger.info(f"Restored dataset from Supabase Storage for project {project_id}")
     return content
 
 
-async def delete_dataset(project_id: str) -> None:
-    """Removes the CSV file from Supabase Storage."""
+async def _supabase_delete(project_id: str) -> None:
     def _run() -> None:
         r = requests.delete(
-            _delete_url(),
+            _supabase_delete_url(),
             json={"prefixes": [f"{project_id}.csv"]},
-            headers=_headers(),
+            headers=_supabase_headers(),
             timeout=_TIMEOUT,
         )
         if r.status_code not in (200, 404):
@@ -74,8 +81,66 @@ async def delete_dataset(project_id: str) -> None:
     await asyncio.to_thread(_run)
 
 
+# Local filesystem Storage
+
+def _local_path(project_id: str) -> Path:
+    base = Path(settings.LOCAL_STORAGE_PATH)
+    base.mkdir(parents=True, exist_ok=True)
+    return base / f"{project_id}.csv"
+
+
+async def _local_upload(project_id: str, content: bytes) -> None:
+    def _run() -> None:
+        _local_path(project_id).write_bytes(content)
+
+    await asyncio.to_thread(_run)
+    logger.info(f"Saved dataset to local storage for project {project_id}")
+
+
+async def _local_download(project_id: str) -> bytes | None:
+    def _run() -> bytes | None:
+        p = _local_path(project_id)
+        return p.read_bytes() if p.exists() else None
+
+    content = await asyncio.to_thread(_run)
+    if content is not None:
+        logger.info(f"Restored dataset from local storage for project {project_id}")
+    return content
+
+
+async def _local_delete(project_id: str) -> None:
+    def _run() -> None:
+        p = _local_path(project_id)
+        if p.exists():
+            p.unlink()
+
+    await asyncio.to_thread(_run)
+
+
+# Public API — dispatches based on STORAGE_PROVIDER
+
+async def upload_dataset(project_id: str, content: bytes) -> None:
+    if settings.STORAGE_PROVIDER == "local":
+        await _local_upload(project_id, content)
+    else:
+        await _supabase_upload(project_id, content)
+
+
+async def download_dataset(project_id: str) -> bytes | None:
+    if settings.STORAGE_PROVIDER == "local":
+        return await _local_download(project_id)
+    return await _supabase_download(project_id)
+
+
+async def delete_dataset(project_id: str) -> None:
+    if settings.STORAGE_PROVIDER == "local":
+        await _local_delete(project_id)
+    else:
+        await _supabase_delete(project_id)
+
+
 async def get_or_restore_dataframe(project_id: str) -> pd.DataFrame | None:
-    """Returns the project DataFrame from Redis, restoring from Storage on a cache miss."""
+    """Returns the project DataFrame from Redis, restoring from storage on a cache miss."""
     from app.core.redis import get_dataframe, set_dataframe
 
     df = await get_dataframe(project_id)
