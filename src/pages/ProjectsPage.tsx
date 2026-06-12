@@ -18,7 +18,7 @@ const STATUS_STYLES: Record<string, { dot: string; text: string; bg: string; lab
 const STEP_LABELS: Record<string, string> = {
   upload: 'Upload',
   analyze: 'Analysis',
-  'missing_values': 'Missing Values',
+  'missing-values': 'Missing Values',
   outliers: 'Outliers',
   encoding: 'Encoding',
   correlation: 'Correlation',
@@ -26,6 +26,12 @@ const STEP_LABELS: Record<string, string> = {
   training: 'Training',
   evaluation: 'Evaluation',
   optimization: 'Optimization',
+  export: 'Export',
+  'filter-rows': 'Filter Rows',
+  'feature-engineering': 'Feature Eng.',
+  'feature-selection': 'Feature Sel.',
+  'cross-validate': 'Cross Validation',
+  'pipeline-history': 'History',
 }
 
 function timeAgo(dateStr: string): string {

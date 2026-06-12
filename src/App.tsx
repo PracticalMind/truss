@@ -38,7 +38,16 @@ const STEP_TITLES: Record<PipelineStep, string> = {
   evaluation: 'Model Evaluation',
   optimization: 'Hyperparameter Optimization',
   export: 'Export & Results',
+  'filter-rows': 'Filter Rows',
+  'feature-engineering': 'Feature Engineering',
+  'feature-selection': 'Feature Selection',
+  'cross-validate': 'Cross Validation',
+  'pipeline-history': 'Pipeline History',
 }
+
+const FREESTYLE_ONLY_STEPS = new Set<PipelineStep>([
+  'filter-rows', 'feature-engineering', 'feature-selection', 'cross-validate', 'pipeline-history',
+])
 
 const STEP_BADGES: Partial<Record<PipelineStep, string>> = {}
 
@@ -107,9 +116,14 @@ export default function App() {
     if (activeProjectId) persistStep(activeProjectId, step)
   }
 
-  // Switch view mode mid-session and persist
+  // Switch view mode mid-session and persist.
+  // When switching to guided while on a freestyle-only step, fall back to missing-values.
   const handleSwitchViewMode = (mode: ViewMode) => {
     setViewMode(mode)
+    if (mode === 'guided' && FREESTYLE_ONLY_STEPS.has(currentStep)) {
+      setCurrentStep('missing-values')
+      if (activeProjectId) persistStep(activeProjectId, 'missing-values')
+    }
     if (activeProjectId) persistViewMode(activeProjectId, mode)
   }
 
@@ -155,6 +169,9 @@ export default function App() {
       case 'evaluation': return <EvaluationPage projectId={projectId} onNext={handleNext} />
       case 'optimization': return <OptimizationPage projectId={projectId} onNext={handleNext} />
       case 'export': return <ExportPage projectId={projectId} onDashboard={() => handlePageChange('dashboard')} />
+      default:
+        // Freestyle-only steps have no guided equivalent — redirect to missing-values
+        return <MissingValuesPage projectId={projectId} onNext={handleNext} />
     }
   }
 
@@ -170,7 +187,8 @@ export default function App() {
             if (activeProjectId) persistStep(activeProjectId, step)
           }}
           onPageChange={(page) => {
-            handleSwitchViewMode('guided')
+            // Navigate away without changing view_mode in DB.
+            // When the user returns to this project it will correctly reopen in freestyle.
             handlePageChange(page)
           }}
           onSwitchToGuided={() => handleSwitchViewMode('guided')}

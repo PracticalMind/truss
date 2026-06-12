@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import FreestyleTopBar from './FreestyleTopBar'
 import FreestyleDataTable from './FreestyleDataTable'
 import FreestyleDrawer from './FreestyleDrawer'
@@ -57,9 +57,16 @@ export default function FreestyleLayout({
   onSwitchToGuided,
   onNewProject,
 }: FreestyleLayoutProps) {
-  const [openDrawerStep, setOpenDrawerStep] = useState<PipelineStep | null>(null)
+  const [openDrawerStep, setOpenDrawerStep] = useState<PipelineStep | null>(
+    DRAWER_STEPS.has(currentStep) ? currentStep : null
+  )
   const [completedSteps, setCompletedSteps] = useState<Set<PipelineStep>>(new Set())
   const [overlay, setOverlay] = useState<OverlayState>(null)
+
+  // When projectId changes (switching projects), restore drawer to the persisted step.
+  useEffect(() => {
+    setOpenDrawerStep(DRAWER_STEPS.has(currentStep) ? currentStep : null)
+  }, [projectId]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const showUpload = currentStep === 'upload'
 
