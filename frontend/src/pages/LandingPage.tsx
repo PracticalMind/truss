@@ -3,7 +3,6 @@ import {
   Sparkles,
   Rocket,
   Check,
-  Lock,
   Github,
   FileText,
   Mail,
@@ -292,33 +291,33 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
               </div>
             </FadeIn>
 
-            {/* AI Mode - slides from right */}
+            {/* Guided Mode - slides from right */}
             <FadeIn x={40} delay={0.1} className="contents">
-              <div className="p-8 bg-[#0d1117] opacity-70 relative">
+              <div className="p-8 bg-[#0d1117]">
                 <div className="flex items-center justify-between mb-5">
                   <div className="flex items-center gap-2.5">
                     <Zap size={18} className="text-[#06b6d4]" />
-                    <span className="text-base font-semibold text-white">AI Mode</span>
+                    <span className="text-base font-semibold text-white">Guided Mode</span>
                   </div>
-                  <span className="text-[10px] font-semibold text-[#06b6d4] border border-[#06b6d4]/30 bg-[#06b6d4]/10 px-2 py-0.5 rounded uppercase tracking-wide">
-                    Coming Soon
+                  <span className="text-[10px] font-mono text-white/40 border border-white/[0.1] px-2 py-0.5 rounded">
+                    v2.4 Live
                   </span>
                 </div>
-                <p className="text-sm text-white/40 leading-relaxed mb-6">
-                  Describe your problem in natural language. Our internal LLM agent builds, tests, and optimizes the entire pipeline for you autonomously.
+                <p className="text-sm text-white/50 leading-relaxed mb-6">
+                  A step-by-step flow that walks you through every pipeline decision , sensible defaults, inline tips, and zero prior ML knowledge required.
                 </p>
                 <ul className="space-y-3 mb-8">
-                  {['Prompt-to-Model synthesis', 'Auto-scaling inference', 'Predictive cost analysis'].map((f) => (
+                  {['Step-by-step pipeline wizard', 'Smart defaults & inline tips', 'Beginner-friendly interface'].map((f) => (
                     <li key={f} className="flex items-center gap-2.5">
-                      <div className="w-4 h-4 rounded-full bg-white/[0.04] border border-white/[0.1] flex items-center justify-center flex-shrink-0">
-                        <Lock size={8} className="text-white/30" />
+                      <div className="w-4 h-4 rounded-full bg-[#06b6d4]/10 border border-[#06b6d4]/30 flex items-center justify-center flex-shrink-0">
+                        <Check size={9} className="text-[#06b6d4]" />
                       </div>
-                      <span className="text-sm text-white/30">{f}</span>
+                      <span className="text-sm text-white/60">{f}</span>
                     </li>
                   ))}
                 </ul>
-                <button className="w-full py-2.5 border border-white/[0.08] text-sm text-white/30 rounded cursor-not-allowed">
-                  Join Waitlist
+                <button onClick={() => onNavigate('login')} className="w-full py-2.5 border border-white/[0.12] text-sm text-white/70 hover:text-white hover:border-white/25 rounded transition-colors cursor-pointer">
+                  Get Started
                 </button>
               </div>
             </FadeIn>
@@ -363,19 +362,10 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
               </div>
             </FadeIn>
 
-            {/* Contribute - highlighted */}
-            <motion.div
-              ref={useRef(null)}
-              initial={{ opacity: 0, scale: 0.95 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true, margin: '-60px' }}
-              transition={{ duration: 0.5, delay: 0.2, ease: [0.22, 0.61, 0.36, 1] }}
-            >
-              <div className="bg-[#111827] border-2 border-[#f97316] rounded-lg p-6 flex flex-col relative h-full">
-                <div className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 bg-[#f97316] text-white text-[10px] font-bold uppercase rounded tracking-wide">
-                  Recommended
-                </div>
-                <p className="text-[10px] font-semibold text-[#f97316] uppercase tracking-widest mb-3">Contribute</p>
+            {/* Contribute */}
+            <FadeIn y={24} delay={0.2}>
+              <div className="bg-[#111827] border border-white/[0.08] rounded-lg p-6 flex flex-col h-full">
+                <p className="text-[10px] font-semibold text-white/40 uppercase tracking-widest mb-3">Contribute</p>
                 <div className="flex items-baseline gap-1 mb-1">
                   <span className="text-4xl font-black text-white">Fork</span>
                 </div>
@@ -389,12 +379,12 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                     </li>
                   ))}
                 </ul>
-                <a href="https://github.com/baranylcn/truss" target="_blank" rel="noopener noreferrer" className="w-full py-2.5 bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-semibold rounded transition-colors cursor-pointer flex items-center justify-center gap-2">
+                <a href="https://github.com/PracticalMind/truss" target="_blank" rel="noopener noreferrer" className="w-full py-2.5 bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-semibold rounded transition-colors cursor-pointer flex items-center justify-center gap-2">
                   <Github size={14} />
                   View on GitHub
                 </a>
               </div>
-            </motion.div>
+            </FadeIn>
 
             {/* Deploy */}
             <FadeIn y={24} delay={0.3}>
@@ -426,9 +416,9 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
       <footer className="border-t border-white/[0.06] bg-[#0a0f1e] py-8">
         <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
           <div className="flex items-center gap-2">
-            <img src="/truss_logo.png" alt="Truss" className="h-5 w-auto object-contain opacity-40" />
+            <img src="/icon.png" alt="Truss" className="h-5 w-auto object-contain opacity-40" />
             <span className="text-white/40 text-xs font-semibold uppercase tracking-widest">Truss</span>
-            <span className="text-white/20 text-xs ml-2">© 2025. Build with precision.</span>
+            <span className="text-white/20 text-xs ml-2">© 2026. Build with precision.</span>
           </div>
           <div className="flex items-center gap-6">
             {[

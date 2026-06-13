@@ -116,7 +116,7 @@ export default function SettingsPage() {
                   {[
                     { label: 'Projects', value: '∞ Unlimited' },
                     { label: 'Datasets', value: 'Up to 10 GB' },
-                    { label: 'AI Suggestions', value: 'Enabled' },
+                    { label: 'Export Formats', value: 'ONNX / REST' },
                   ].map((f) => (
                     <div key={f.label}>
                       <p className="text-[10px] text-[#4a5568] uppercase tracking-widest">{f.label}</p>

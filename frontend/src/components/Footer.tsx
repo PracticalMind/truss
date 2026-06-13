@@ -6,7 +6,7 @@ export default function Footer() {
         <a href="#" className="text-[11px] text-[#4a5568] hover:text-[#94a3b8] transition-colors duration-150">GitHub</a>
         <a href="#" className="text-[11px] text-[#4a5568] hover:text-[#94a3b8] transition-colors duration-150">Docs</a>
         <a href="#" className="text-[11px] text-[#4a5568] hover:text-[#94a3b8] transition-colors duration-150">Contact</a>
-        <span className="text-[11px] text-[#4a5568]">© 2025 Truss</span>
+        <span className="text-[11px] text-[#4a5568]">© 2026 Truss</span>
       </div>
     </footer>
   );

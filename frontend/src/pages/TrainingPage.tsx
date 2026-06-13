@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
-import { ChevronDown, Play, Lock, Zap } from 'lucide-react'
+import { ChevronDown, Play, Zap } from 'lucide-react'
 import toast from 'react-hot-toast'
 import { datasetApi } from '../services/api/dataset'
 import { modelApi } from '../services/api/model'
@@ -336,21 +336,6 @@ export default function TrainingPage({ projectId, onNext }: TrainingPageProps) {
 
         {/* Right panel */}
         <div className="w-64 border-l border-[#1e2a3a] p-5 flex flex-col gap-5">
-          <div className="bg-[#111827] border border-[#1e2a3a] rounded-lg p-4">
-            <div className="flex items-center justify-between mb-4">
-              <p className="text-xs font-semibold text-[#94a3b8] uppercase tracking-widest">AI Suggestions</p>
-              <span className="px-2 py-0.5 text-[10px] font-semibold text-[#f97316] bg-[#f9731620] rounded uppercase">PRO</span>
-            </div>
-            <div className="flex flex-col items-center py-4">
-              <div className="w-14 h-14 rounded-xl bg-[#1c2333] border border-[#2d3748] flex items-center justify-center mb-3">
-                <Lock size={22} className="text-[#38bdf8]" />
-              </div>
-              <p className="text-sm font-semibold text-white mb-1">Unlock Insights</p>
-              <p className="text-[11px] text-[#64748b] text-center mb-4 leading-relaxed">Our AI analyzes your feature set and recommends optimal hyperparameters.</p>
-              <button className="w-full py-2 border border-[#f97316] text-[#f97316] text-xs font-semibold rounded hover:bg-[#f9731610]">Upgrade to Pro</button>
-            </div>
-          </div>
-
           {allColumns.length > 0 && (
             <div className="bg-[#111827] border border-[#1e2a3a] rounded-lg p-4">
               <p className="text-[10px] text-[#64748b] uppercase tracking-widest mb-2">Dataset</p>
@@ -359,17 +344,6 @@ export default function TrainingPage({ projectId, onNext }: TrainingPageProps) {
             </div>
           )}
 
-          <div className="bg-[#111827] border border-[#1e2a3a] rounded-lg p-4 opacity-40">
-            <div className="flex items-center justify-between mb-2">
-              <p className="text-[10px] text-[#64748b] uppercase tracking-widest">Recommended Model</p>
-              <span className="px-1.5 py-0.5 text-[9px] font-semibold text-[#f97316] bg-[#f9731620] rounded uppercase">PRO</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Zap size={14} className="text-[#64748b]" />
-              <span className="text-sm text-[#64748b]">Deep Ensemble</span>
-              <Lock size={12} className="text-[#374151] ml-auto" />
-            </div>
-          </div>
         </div>
       </div>
     </div>
