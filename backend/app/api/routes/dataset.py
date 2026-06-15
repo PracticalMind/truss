@@ -111,7 +111,7 @@ async def upload_dataset(
     project.current_step = "analyze"
     await db.commit()
 
-    logger.info(f"Uploaded {file.filename} for project {project_id} ({shape[0]}x{shape[1]})")
+    logger.info(f"CSV uploaded for project {project_id} ({shape[0]}x{shape[1]})")
     payload = sanitize_for_json(df_to_payload(df, project_id))
     return payload
 

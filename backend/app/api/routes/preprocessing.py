@@ -184,7 +184,7 @@ async def missing_values(
     if body.columns is not None and len(body.columns) == 0:
         raise HTTPException(status_code=400, detail="Columns array cannot be empty")
 
-    numerical_method = body.numerical_method or body.method or "mean"
+    numerical_method = body.numerical_method or "mean"
     categorical_method = body.categorical_method or "mode"
 
     try:
