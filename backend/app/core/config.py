@@ -1,5 +1,5 @@
 from typing import List, Literal, Union
-from pydantic import field_validator
+from pydantic import field_validator, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -46,6 +46,18 @@ class Settings(BaseSettings):
         if isinstance(v, str):
             return [origin.strip() for origin in v.split(",") if origin.strip()]
         return v
+
+    @model_validator(mode="after")
+    def validate_secrets(self) -> "Settings":
+        if (
+            self.AUTH_PROVIDER == "local"
+            and self.LOCAL_JWT_SECRET == "dev-secret-change-in-production"
+        ):
+            raise ValueError(
+                "LOCAL_JWT_SECRET must be changed from the default value. "
+                "Generate one with: python -c \"import secrets; print(secrets.token_hex(32))\""
+            )
+        return self
 
     model_config = SettingsConfigDict(
         env_file=".env",

@@ -22,14 +22,15 @@ async def lifespan(app: FastAPI):
 def get_application() -> FastAPI:
     app = FastAPI(title=settings.PROJECT_NAME, version="2.0.0", lifespan=lifespan)
 
-    origins = settings.BACKEND_CORS_ORIGINS or ["*"]
+    if not settings.BACKEND_CORS_ORIGINS:
+        raise RuntimeError("BACKEND_CORS_ORIGINS must be set to at least one allowed origin")
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=origins,
+        allow_origins=settings.BACKEND_CORS_ORIGINS,
         allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-        expose_headers=["*"],
+        allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        allow_headers=["Authorization", "Content-Type"],
+        expose_headers=["Content-Disposition"],
     )
 
     app.include_router(health.router)
