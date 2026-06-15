@@ -1,10 +1,8 @@
-import re
 from typing import List
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, delete
-from sqlalchemy.exc import DBAPIError
 
 from app.core.auth import get_current_user
 from app.core.redis import delete_dataframe
@@ -51,10 +49,7 @@ async def create_project(
         await db.commit()
     except DBAPIError as exc:
         await db.rollback()
-        raw = str(exc.orig)
-        # strip SQLAlchemy/asyncpg class prefix: "<class '...Error'>: message"
-        msg = re.sub(r"^<class '[^']*'>:\s*", "", raw)
-        raise HTTPException(status_code=403, detail=msg) from exc
+        raise HTTPException(status_code=409, detail="Project could not be created.") from exc
     await db.refresh(project)
     return project
 

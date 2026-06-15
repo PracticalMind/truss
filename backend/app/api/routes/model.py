@@ -425,7 +425,7 @@ async def batch_predict(
     return StreamingResponse(
         io.BytesIO(csv_content.encode()),
         media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename={filename}"},
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 
@@ -476,7 +476,7 @@ async def export_predictions(
     return StreamingResponse(
         io.BytesIO(csv_content.encode()),
         media_type="text/csv",
-        headers={"Content-Disposition": f"attachment; filename={filename}"},
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )
 
 
@@ -514,5 +514,5 @@ async def export_model_file(
     return StreamingResponse(
         io.BytesIO(model_bytes),
         media_type="application/octet-stream",
-        headers={"Content-Disposition": f"attachment; filename={filename}"},
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
     )

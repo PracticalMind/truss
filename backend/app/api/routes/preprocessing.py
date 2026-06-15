@@ -495,8 +495,8 @@ async def filter_rows(
                 "<=": col_series <= parsed_val,
                 "==": col_series == parsed_val,
                 "!=": col_series != parsed_val,
-                "contains": col_series.astype(str).str.contains(str(value), na=False),
-                "not_contains": ~col_series.astype(str).str.contains(str(value), na=False),
+                "contains": col_series.astype(str).str.contains(str(value), na=False, regex=False),
+                "not_contains": ~col_series.astype(str).str.contains(str(value), na=False, regex=False),
             }
             if operator not in ops:
                 raise HTTPException(status_code=400, detail=f"Unknown operator '{operator}'")
