@@ -83,7 +83,7 @@ async def _get_current_user_supabase(
     user = result.scalar_one_or_none()
 
     if user is None:
-        user = User(id=user_id, email=email, plan="free")
+        user = User(id=user_id, email=email)
         db.add(user)
         await db.commit()
         await db.refresh(user)

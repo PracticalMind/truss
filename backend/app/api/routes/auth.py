@@ -25,7 +25,6 @@ async def sync_user(current_user: User = Depends(get_current_user)) -> dict:
     return {
         "id": str(current_user.id),
         "email": current_user.email,
-        "plan": current_user.plan,
     }
 
 
@@ -57,7 +56,6 @@ async def register(
         id=uuid.uuid4(),
         email=body.email,
         password_hash=hash_password(body.password),
-        plan="free",
     )
     db.add(user)
     await db.commit()

@@ -4,7 +4,7 @@ import { useAuth } from '../contexts/AuthContext';
 
 export default function SettingsPage() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState<'profile' | 'plan'>('profile');
+  const [activeTab, setActiveTab] = useState<'profile' | 'api'>('profile');
   const [name, setName] = useState(user?.user_metadata?.full_name ?? '');
   const [saved, setSaved] = useState(false);
   const [apiKey] = useState('sk-truss-xxxxxxxxxxxxxxxxxxxxxx');
@@ -23,7 +23,7 @@ export default function SettingsPage() {
       <div className="flex-1 p-6 overflow-y-auto max-w-3xl">
         {/* Tabs */}
         <div className="flex items-center gap-6 border-b border-[#1e2a3a] mb-8">
-          {(['profile', 'plan'] as const).map((tab) => (
+          {(['profile', 'api'] as const).map((tab) => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -33,7 +33,7 @@ export default function SettingsPage() {
                   : 'border-transparent text-[#64748b] hover:text-[#94a3b8]'
               }`}
             >
-              {tab === 'plan' ? 'Plan & API' : 'Profile'}
+              {tab === 'api' ? 'API' : 'Profile'}
             </button>
           ))}
         </div>
@@ -94,39 +94,8 @@ export default function SettingsPage() {
           </div>
         )}
 
-        {activeTab === 'plan' && (
+        {activeTab === 'api' && (
           <div className="space-y-6">
-            {/* Current Plan */}
-            <div>
-              <p className="text-[10px] font-semibold text-[#64748b] uppercase tracking-widest mb-4">Current Plan</p>
-              <div className="bg-[#111827] border border-[#f97316] rounded-lg p-5">
-                <div className="flex items-center justify-between mb-4">
-                  <div>
-                    <div className="flex items-center gap-2 mb-1">
-                      <p className="text-lg font-bold text-white">Pro Plan</p>
-                      <span className="px-2 py-0.5 text-[10px] font-semibold text-[#f97316] bg-[#f9731620] rounded uppercase">Active</span>
-                    </div>
-                    <p className="text-sm text-[#64748b]">$49/month · Renews Dec 1, 2026</p>
-                  </div>
-                  <button className="px-4 py-2 border border-[#2d3748] text-sm text-[#94a3b8] rounded hover:border-[#374151] hover:text-white transition-colors">
-                    Manage
-                  </button>
-                </div>
-                <div className="grid grid-cols-3 gap-3 pt-4 border-t border-[#1e2a3a]">
-                  {[
-                    { label: 'Projects', value: '∞ Unlimited' },
-                    { label: 'Datasets', value: 'Up to 10 GB' },
-                    { label: 'Export Formats', value: 'ONNX / REST' },
-                  ].map((f) => (
-                    <div key={f.label}>
-                      <p className="text-[10px] text-[#4a5568] uppercase tracking-widest">{f.label}</p>
-                      <p className="text-sm text-[#94a3b8] mt-0.5">{f.value}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            </div>
-
             {/* API Key */}
             <div>
               <p className="text-[10px] font-semibold text-[#64748b] uppercase tracking-widest mb-4">API Access</p>

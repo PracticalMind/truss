@@ -184,7 +184,6 @@ export default function Sidebar({ currentPage, currentStep, onPageChange, onStep
           </div>
           <div className="text-left min-w-0">
             <p className="text-xs font-medium text-[#e2e8f0] truncate">Alex ML</p>
-            <p className="text-[10px] text-[#f97316]">Pro Plan</p>
           </div>
         </button>
         <div className="flex items-center justify-between mt-1 px-2">

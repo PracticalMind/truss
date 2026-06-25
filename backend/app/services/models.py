@@ -10,7 +10,6 @@ class User(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True)
     email = Column(String, unique=True, nullable=False)
-    plan = Column(String, default="free", nullable=False)
     api_key_hash = Column(String, nullable=True)
     # Only populated in local auth mode; always NULL when using Supabase auth.
     password_hash = Column(String, nullable=True)
