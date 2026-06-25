@@ -60,7 +60,8 @@ export default function FreestyleTopBar({
   onNewProject,
   onAnalyze,
 }: FreestyleTopBarProps) {
-  const { signOut } = useAuth()
+  const { user, signOut } = useAuth()
+  const initials = (user?.user_metadata?.full_name ?? user?.email ?? '?').charAt(0).toUpperCase()
   const [openMenu, setOpenMenu] = useState<OpenMenu>(null)
   const hamburgerRef = useRef<HTMLDivElement>(null)
   const stepsRef = useRef<HTMLDivElement>(null)
@@ -234,7 +235,7 @@ export default function FreestyleTopBar({
           onClick={() => onPageChange('settings')}
           className="w-7 h-7 rounded-full bg-[#1e2a3a] border border-[#2d3748] flex items-center justify-center"
         >
-          <span className="text-[10px] font-bold text-[#f97316]">A</span>
+          <span className="text-[10px] font-bold text-[#f97316]">{initials}</span>
         </button>
       </div>
     </div>

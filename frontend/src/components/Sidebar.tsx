@@ -65,7 +65,9 @@ function StepIcon({ status }: { status: StepStatus }) {
 }
 
 export default function Sidebar({ currentPage, currentStep, onPageChange, onStepChange, onBackToDashboard, onSwitchToFreestyle }: SidebarProps) {
-  const { signOut } = useAuth();
+  const { user, signOut } = useAuth();
+  const displayName = user?.user_metadata?.full_name ?? user?.email ?? '';
+  const initials = (displayName || '?').charAt(0).toUpperCase();
   const isInProject = currentPage === 'pipeline';
 
   const handleSignOut = async () => {
@@ -180,10 +182,10 @@ export default function Sidebar({ currentPage, currentStep, onPageChange, onStep
           className="w-full flex items-center gap-2 hover:bg-white/[0.04] rounded px-2 py-1.5 transition-colors duration-150 ease-in-out cursor-pointer"
         >
           <div className="w-7 h-7 rounded-full bg-[#1e2a3a] border border-[#2d3748] flex items-center justify-center flex-shrink-0">
-            <span className="text-xs font-bold text-[#f97316]">A</span>
+            <span className="text-xs font-bold text-[#f97316]">{initials}</span>
           </div>
           <div className="text-left min-w-0">
-            <p className="text-xs font-medium text-[#e2e8f0] truncate">Alex ML</p>
+            <p className="text-xs font-medium text-[#e2e8f0] truncate">{displayName}</p>
           </div>
         </button>
         <div className="flex items-center justify-between mt-1 px-2">
