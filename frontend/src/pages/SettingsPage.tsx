@@ -3,15 +3,46 @@ import { Check } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function SettingsPage() {
-  const { user } = useAuth();
+  const { user, updatePassword } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'api'>('profile');
   const [name, setName] = useState(user?.user_metadata?.full_name ?? '');
   const [saved, setSaved] = useState(false);
   const [apiKey] = useState('sk-truss-xxxxxxxxxxxxxxxxxxxxxx');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmPassword, setConfirmPassword] = useState('');
+  const [pwLoading, setPwLoading] = useState(false);
+  const [pwError, setPwError] = useState('');
+  const [pwSaved, setPwSaved] = useState(false);
+
+  const canChangePassword = (import.meta.env.VITE_AUTH_PROVIDER ?? 'local') === 'supabase';
 
   const handleSave = () => {
     setSaved(true);
     setTimeout(() => setSaved(false), 2500);
+  };
+
+  const handleChangePassword = async () => {
+    setPwError('');
+    if (newPassword.length < 8) {
+      setPwError('Password must be at least 8 characters.');
+      return;
+    }
+    if (newPassword !== confirmPassword) {
+      setPwError('Passwords do not match.');
+      return;
+    }
+    setPwLoading(true);
+    try {
+      await updatePassword(newPassword);
+      setNewPassword('');
+      setConfirmPassword('');
+      setPwSaved(true);
+      setTimeout(() => setPwSaved(false), 2500);
+    } catch (err: any) {
+      setPwError(err.message || 'Failed to change password');
+    } finally {
+      setPwLoading(false);
+    }
   };
 
   const initials = (user?.user_metadata?.full_name ?? user?.email ?? '?')
@@ -91,6 +122,59 @@ export default function SettingsPage() {
                 'Save Changes'
               )}
             </button>
+
+            {canChangePassword && (
+              <div>
+                <p className="text-[10px] font-semibold text-[#64748b] uppercase tracking-widest mb-4">Security</p>
+                <div className="bg-[#111827] border border-[#1e2a3a] rounded-lg p-5 space-y-4">
+                  <div className="grid grid-cols-2 gap-5">
+                    <div>
+                      <label className="text-xs font-medium text-[#94a3b8] block mb-2">New Password</label>
+                      <input
+                        type="password"
+                        value={newPassword}
+                        onChange={(e) => setNewPassword(e.target.value)}
+                        placeholder="At least 8 characters"
+                        className="w-full px-4 py-3 bg-[#0d1117] border border-[#2d3748] rounded-lg text-sm text-[#e2e8f0] placeholder-[#4a5568] focus:outline-none focus:border-[#f97316] transition-colors"
+                      />
+                    </div>
+                    <div>
+                      <label className="text-xs font-medium text-[#94a3b8] block mb-2">Confirm Password</label>
+                      <input
+                        type="password"
+                        value={confirmPassword}
+                        onChange={(e) => setConfirmPassword(e.target.value)}
+                        placeholder="Re-enter new password"
+                        className="w-full px-4 py-3 bg-[#0d1117] border border-[#2d3748] rounded-lg text-sm text-[#e2e8f0] placeholder-[#4a5568] focus:outline-none focus:border-[#f97316] transition-colors"
+                      />
+                    </div>
+                  </div>
+
+                  {pwError && (
+                    <div className="p-3 bg-[#f87171]/10 border border-[#f87171]/20 rounded text-xs text-[#f87171]">
+                      {pwError}
+                    </div>
+                  )}
+
+                  <button
+                    onClick={handleChangePassword}
+                    disabled={pwLoading}
+                    className="flex items-center gap-2 px-5 py-2.5 bg-[#f97316] hover:bg-[#ea6c0a] disabled:opacity-60 text-white text-sm font-semibold rounded-lg transition-colors"
+                  >
+                    {pwSaved ? (
+                      <>
+                        <Check size={14} />
+                        Updated!
+                      </>
+                    ) : pwLoading ? (
+                      'Updating...'
+                    ) : (
+                      'Change Password'
+                    )}
+                  </button>
+                </div>
+              </div>
+            )}
           </div>
         )}
 
