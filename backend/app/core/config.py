@@ -46,6 +46,10 @@ class Settings(BaseSettings):
     MAX_PROJECTS_PER_USER: int = 10
     MAX_STORAGE_MB_PER_USER: int = 100
 
+    # Number of trusted reverse proxies in front of the app. The client IP for
+    # rate limiting is read this many hops from the right of X-Forwarded-For.
+    TRUSTED_PROXY_COUNT: int = 1
+
     @field_validator("BACKEND_CORS_ORIGINS", mode="before")
     @classmethod
     def parse_cors_origins(cls, v):

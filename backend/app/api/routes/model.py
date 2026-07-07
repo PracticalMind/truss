@@ -14,6 +14,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
 from app.core.auth import get_current_user
+from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.storage import get_or_restore_dataframe, upload_model, download_model
 from app.core.redis import acquire_training_lock, release_training_lock
@@ -28,7 +29,6 @@ logger = logging.getLogger(__name__)
 
 router = APIRouter(prefix="/model", tags=["model"])
 
-_BATCH_MAX_FILE_SIZE = 100 * 1024 * 1024
 _ALLOWED_CSV_CONTENT_TYPES = {
     "text/csv", "text/plain", "application/csv", "application/octet-stream",
 }
@@ -418,6 +418,7 @@ async def cross_validate(
 
 
 @router.post("/batch-predict/{project_id}")
+@limiter.limit("30/hour")
 async def batch_predict(
     request: Request,
     project_id: str,
@@ -433,11 +434,12 @@ async def batch_predict(
     if content_type and content_type not in _ALLOWED_CSV_CONTENT_TYPES:
         raise HTTPException(status_code=400, detail="Only CSV files are supported")
 
+    max_bytes = settings.MAX_UPLOAD_MB * 1024 * 1024
     content_length = request.headers.get("content-length")
     if content_length:
         try:
-            if int(content_length) > _BATCH_MAX_FILE_SIZE:
-                raise HTTPException(status_code=413, detail="File exceeds 100MB limit")
+            if int(content_length) > max_bytes:
+                raise HTTPException(status_code=413, detail=f"File exceeds {settings.MAX_UPLOAD_MB}MB limit")
         except ValueError:
             pass
 
@@ -448,8 +450,8 @@ async def batch_predict(
     except asyncio.TimeoutError:
         raise HTTPException(status_code=408, detail="File upload timed out")
 
-    if len(contents) > _BATCH_MAX_FILE_SIZE:
-        raise HTTPException(status_code=413, detail="File exceeds 100MB limit")
+    if len(contents) > max_bytes:
+        raise HTTPException(status_code=413, detail=f"File exceeds {settings.MAX_UPLOAD_MB}MB limit")
 
     try:
         df_new = pd.read_csv(io.BytesIO(contents))
