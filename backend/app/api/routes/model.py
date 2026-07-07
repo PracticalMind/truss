@@ -10,7 +10,6 @@ import numpy as np
 import pandas as pd
 from fastapi import APIRouter, Depends, HTTPException, Request, UploadFile, File
 from fastapi.responses import StreamingResponse
-from sklearn.model_selection import train_test_split
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
 
@@ -80,92 +79,91 @@ async def start_training(
         raise HTTPException(status_code=409, detail="Training already in progress for this project.")
 
     try:
-        loop = asyncio.get_running_loop()
-        _pipeline, task_type, metrics = await loop.run_in_executor(
-            None,
-            partial(
-                train_model,
-                df=df,
-                model_type=body.model_type,
-                target_column=body.target_column,
-                test_size=body.test_size,
-                hyperparameters=body.hyperparameters,
-                task_type_override=body.task_type,
-            ),
+        try:
+            loop = asyncio.get_running_loop()
+            _pipeline, task_type, metrics = await loop.run_in_executor(
+                None,
+                partial(
+                    train_model,
+                    df=df,
+                    model_type=body.model_type,
+                    target_column=body.target_column,
+                    test_size=body.test_size,
+                    hyperparameters=body.hyperparameters,
+                    task_type_override=body.task_type,
+                ),
+            )
+        except ValueError as exc:
+            raise HTTPException(status_code=400, detail=str(exc))
+        except Exception as exc:
+            logger.exception(f"Training failed for project {project_id}")
+            raise HTTPException(status_code=500, detail=f"Training failed: {exc}")
+
+        sanitized_metrics = sanitize_for_json(metrics)
+        model_id = uuid.uuid4()
+
+        def _serialize():
+            buf = io.BytesIO()
+            joblib.dump(_pipeline, buf)
+            return buf.getvalue()
+
+        model_bytes = await loop.run_in_executor(None, _serialize)
+        model_stored = False
+        try:
+            await upload_model(str(model_id), model_bytes)
+            model_stored = True
+        except Exception as storage_exc:
+            logger.error(f"Model storage failed for project {project_id}: {storage_exc}")
+
+        best_q = await db.execute(
+            select(TrainedModel).where(
+                TrainedModel.project_id == parse_project_id(project_id),
+                TrainedModel.is_best == True,  # noqa: E712
+            )
         )
-    except ValueError as exc:
-        raise HTTPException(status_code=400, detail=str(exc))
-    except Exception as exc:
-        logger.exception(f"Training failed for project {project_id}")
-        raise HTTPException(status_code=500, detail=f"Training failed: {exc}")
+        existing_bests = list(best_q.scalars().all())
+
+        if existing_bests:
+            if task_type == "classification":
+                best_existing = max((m.metrics or {}).get("accuracy", 0.0) for m in existing_bests)
+                is_best = sanitized_metrics.get("accuracy", 0.0) >= best_existing
+            else:
+                best_existing = max((m.metrics or {}).get("r2", float("-inf")) for m in existing_bests)
+                is_best = sanitized_metrics.get("r2", float("-inf")) >= best_existing
+            if is_best:
+                for m in existing_bests:
+                    m.is_best = False
+        else:
+            is_best = True
+
+        model_row = TrainedModel(
+            id=model_id,
+            project_id=parse_project_id(project_id),
+            model_type=body.model_type,
+            target_column=body.target_column,
+            task_type=task_type,
+            metrics=sanitized_metrics,
+            parameters=body.hyperparameters,
+            is_best=is_best,
+            model_path=str(model_id) if model_stored else None,
+        )
+        db.add(model_row)
+
+        project.current_step = "evaluation"
+        project.status = "completed"
+        await db.commit()
+
+        logger.info(f"Training complete for project {project_id}: {body.model_type} ({task_type}) acc={sanitized_metrics.get('accuracy')}")
+
+        return {
+            "success": True,
+            "model_type": body.model_type,
+            "target_column": body.target_column,
+            "task_type": task_type,
+            "metrics": sanitized_metrics,
+        }
     finally:
         await release_training_lock(project_id)
-
-    sanitized_metrics = sanitize_for_json(metrics)
-
-    # Serialize the trained pipeline and persist it so export/predict don't re-train
-    model_id = uuid.uuid4()
-
-    def _serialize():
-        buf = io.BytesIO()
-        joblib.dump(_pipeline, buf)
-        return buf.getvalue()
-
-    model_bytes = await loop.run_in_executor(None, _serialize)
-    model_stored = False
-    try:
-        await upload_model(str(model_id), model_bytes)
-        model_stored = True
-    except Exception as storage_exc:
-        logger.error(f"Model storage failed for project {project_id}: {storage_exc}")
-
-    best_q = await db.execute(
-        select(TrainedModel).where(
-            TrainedModel.project_id == parse_project_id(project_id),
-            TrainedModel.is_best == True,  # noqa: E712
-        )
-    )
-    existing_bests = list(best_q.scalars().all())
-
-    if existing_bests:
-        if task_type == "classification":
-            best_existing = max((m.metrics or {}).get("accuracy", 0.0) for m in existing_bests)
-            is_best = sanitized_metrics.get("accuracy", 0.0) >= best_existing
-        else:
-            best_existing = max((m.metrics or {}).get("r2", float("-inf")) for m in existing_bests)
-            is_best = sanitized_metrics.get("r2", float("-inf")) >= best_existing
-        if is_best:
-            for m in existing_bests:
-                m.is_best = False
-    else:
-        is_best = True
-
-    model_row = TrainedModel(
-        id=model_id,
-        project_id=parse_project_id(project_id),
-        model_type=body.model_type,
-        target_column=body.target_column,
-        task_type=task_type,
-        metrics=sanitized_metrics,
-        parameters=body.hyperparameters,
-        is_best=is_best,
-        model_path=str(model_id) if model_stored else None,
-    )
-    db.add(model_row)
-
-    project.current_step = "evaluation"
-    project.status = "completed"
-    await db.commit()
-
-    logger.info(f"Training complete for project {project_id}: {body.model_type} ({task_type}) acc={sanitized_metrics.get('accuracy')}")
-
-    return {
-        "success": True,
-        "model_type": body.model_type,
-        "target_column": body.target_column,
-        "task_type": task_type,
-        "metrics": sanitized_metrics,
-    }
 
 
 @router.get("/evaluate/{project_id}", response_model=EvaluateResponse)
@@ -496,7 +494,7 @@ async def export_predictions(
     current_user: User = Depends(get_current_user),
     db: AsyncSession = Depends(get_db),
 ) -> StreamingResponse:
-    """Loads the stored model, runs inference on a test split, returns CSV with actual vs predicted."""
+    """Loads the stored model and returns a CSV of actual vs predicted over the full dataset."""
     best_model, df = await _get_best_model_and_df(project_id, current_user, db)
     loop = asyncio.get_running_loop()
     pipe = await _load_pipeline(best_model, loop)
@@ -509,11 +507,9 @@ async def export_predictions(
         if bool_cols:
             X = X.copy()
             X[bool_cols] = X[bool_cols].astype(np.int8)
-        _, X_test, _, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
-        y_pred = pipe.predict(X_test)
-        out = X_test.copy()
-        out["actual"] = y_test.values
-        out["predicted"] = y_pred
+        out = X.copy()
+        out["actual"] = y.values
+        out["predicted"] = pipe.predict(X)
         buf = io.StringIO()
         out.to_csv(buf, index=False)
         return buf.getvalue()

@@ -49,17 +49,20 @@ export default function CorrelationPage({ projectId, onNext }: CorrelationPagePr
   }, [corrData, displayFeatures])
 
   const highCorrPairs = useMemo(() => {
+    if (!corrData) return []
     const pairs: { pair: string; corr: number; dropCol: string }[] = []
-    for (let i = 0; i < displayFeatures.length; i++) {
-      for (let j = i + 1; j < displayFeatures.length; j++) {
-        const val = corrMatrix[i]?.[j] ?? 0
+    for (let i = 0; i < features.length; i++) {
+      for (let j = i + 1; j < features.length; j++) {
+        const a = features[i]
+        const b = features[j]
+        const val = corrData.correlation_matrix[a]?.[b] ?? 0
         if (Math.abs(val) >= threshold) {
-          pairs.push({ pair: `${displayFeatures[i]} & ${displayFeatures[j]}`, corr: val, dropCol: displayFeatures[j] })
+          pairs.push({ pair: `${a} & ${b}`, corr: val, dropCol: b })
         }
       }
     }
     return pairs
-  }, [corrMatrix, displayFeatures, threshold])
+  }, [corrData, features, threshold])
 
   // Collect the actual column names to drop from marked pairs
   const columnsToDrop = useMemo(() => {

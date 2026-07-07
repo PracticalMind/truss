@@ -52,6 +52,12 @@ export default function OutliersPage({ projectId, onNext }: OutliersPageProps) {
     [info, categoricalSet]
   )
 
+  const changeMethod = (m: string) => {
+    setMethod(m)
+    setThreshold(m === 'zscore' ? '3' : '1.5')
+    setMethodOpen(false)
+  }
+
   const detectMutation = useMutation({
     mutationFn: () =>
       preprocessingApi.detectOutliers(projectId, {
@@ -127,7 +133,7 @@ export default function OutliersPage({ projectId, onNext }: OutliersPageProps) {
                 {methodOpen && (
                   <div className="absolute top-full left-0 right-0 mt-1 bg-[#1c2333] border border-[#2d3748] rounded shadow-xl z-20">
                     {METHODS.map(m => (
-                      <button key={m.value} onClick={() => { setMethod(m.value); setMethodOpen(false) }}
+                      <button key={m.value} onClick={() => changeMethod(m.value)}
                         className={`w-full text-left px-3 py-2 text-xs hover:bg-[#f9731618] hover:text-[#f97316] transition-colors ${method === m.value ? 'text-[#f97316] bg-[#f9731610]' : 'text-[#94a3b8]'}`}>
                         {m.label}
                       </button>
