@@ -1,5 +1,5 @@
 import { apiRequest } from './client'
-import type { Project } from '../../types'
+import type { Project, ProjectStats } from '../../types'
 
 interface ProjectCreate {
   name: string
@@ -14,6 +14,8 @@ interface ProjectUpdate {
 
 export const projectsApi = {
   list: () => apiRequest<Project[]>('/projects'),
+
+  stats: () => apiRequest<ProjectStats>('/projects/stats'),
 
   create: (data: ProjectCreate) =>
     apiRequest<Project>('/projects', {

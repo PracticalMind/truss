@@ -69,6 +69,33 @@ async def create_project(
     return project
 
 
+@router.get("/stats")
+async def project_stats(
+    current_user: User = Depends(get_current_user),
+    db: AsyncSession = Depends(get_db),
+) -> dict:
+    projects_count = await db.scalar(
+        select(func.count(Project.id)).where(Project.user_id == current_user.id)
+    ) or 0
+    models_count = await db.scalar(
+        select(func.count(TrainedModel.id))
+        .join(Project, TrainedModel.project_id == Project.id)
+        .where(Project.user_id == current_user.id)
+    ) or 0
+    metrics_rows = await db.execute(
+        select(TrainedModel.metrics)
+        .join(Project, TrainedModel.project_id == Project.id)
+        .where(Project.user_id == current_user.id, TrainedModel.is_best.is_(True))
+    )
+    accuracies = [
+        m["accuracy"]
+        for m in metrics_rows.scalars()
+        if isinstance(m, dict) and isinstance(m.get("accuracy"), (int, float))
+    ]
+    avg_accuracy = sum(accuracies) / len(accuracies) if accuracies else None
+    return {"projects": projects_count, "models": models_count, "avg_accuracy": avg_accuracy}
+
+
 @router.get("/{project_id}", response_model=ProjectResponse)
 async def get_project(
     project_id: str,

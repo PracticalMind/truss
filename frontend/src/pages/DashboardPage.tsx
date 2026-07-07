@@ -31,13 +31,20 @@ export default function DashboardPage({ onOpenProject, onNewProject }: Dashboard
     queryFn: () => projectsApi.list(),
   })
 
-  const completedProjects = projects.filter((p) => p.status === 'completed')
-  const avgAccuracy = '-'
+  const { data: dashStats } = useQuery({
+    queryKey: ['project-stats'],
+    queryFn: () => projectsApi.stats(),
+  })
+
+  const projectCount = dashStats?.projects ?? projects.length
+  const modelCount = dashStats?.models ?? 0
+  const avgAccuracy =
+    dashStats?.avg_accuracy != null ? `${(dashStats.avg_accuracy * 100).toFixed(1)}%` : '—'
 
   const stats = [
-    { label: 'Projects', value: String(projects.length), sub: projects.length === 0 ? 'Create your first project' : 'Total projects' },
-    { label: 'Models', value: String(completedProjects.length), sub: completedProjects.length === 0 ? 'Train a model to see results' : 'Completed' },
-    { label: 'Avg Accuracy', value: avgAccuracy, sub: 'No models trained yet' },
+    { label: 'Projects', value: String(projectCount), sub: projectCount === 0 ? 'Create your first project' : 'Total projects' },
+    { label: 'Models', value: String(modelCount), sub: modelCount === 0 ? 'Train a model to see results' : 'Trained models' },
+    { label: 'Avg Accuracy', value: avgAccuracy, sub: modelCount === 0 ? 'No models trained yet' : 'Across best models' },
   ]
 
   return (

@@ -154,6 +154,7 @@ async def start_training(
     db.add(model_row)
 
     project.current_step = "evaluation"
+    project.status = "completed"
     await db.commit()
 
     logger.info(f"Training complete for project {project_id}: {body.model_type} ({task_type}) acc={sanitized_metrics.get('accuracy')}")

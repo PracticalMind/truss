@@ -1,3 +1,9 @@
+export interface ProjectStats {
+  projects: number
+  models: number
+  avg_accuracy: number | null
+}
+
 export interface Project {
   id: string
   user_id: string
