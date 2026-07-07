@@ -8,6 +8,7 @@ from fastapi import Depends, HTTPException
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select
+from sqlalchemy.exc import IntegrityError
 
 from app.core.config import settings
 from app.services.db import get_db
@@ -81,12 +82,20 @@ async def _get_current_user_supabase(
 
     result = await db.execute(select(User).where(User.id == user_id))
     user = result.scalar_one_or_none()
+    if user is not None:
+        return user
 
-    if user is None:
-        user = User(id=user_id, email=email)
-        db.add(user)
+    user = User(id=user_id, email=email)
+    db.add(user)
+    try:
         await db.commit()
         await db.refresh(user)
+    except IntegrityError:
+        await db.rollback()
+        result = await db.execute(select(User).where(User.id == user_id))
+        user = result.scalar_one_or_none()
+        if user is None:
+            raise HTTPException(status_code=409, detail="Account could not be provisioned")
 
     return user
 
