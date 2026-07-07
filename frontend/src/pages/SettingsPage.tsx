@@ -5,10 +5,8 @@ import { useAuth } from '../contexts/AuthContext';
 
 export default function SettingsPage() {
   const { user, updatePassword, updateProfile } = useAuth();
-  const [activeTab, setActiveTab] = useState<'profile' | 'api'>('profile');
   const [name, setName] = useState(user?.user_metadata?.full_name ?? '');
   const [saved, setSaved] = useState(false);
-  const [apiKey] = useState('sk-truss-xxxxxxxxxxxxxxxxxxxxxx');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [pwLoading, setPwLoading] = useState(false);
@@ -58,25 +56,7 @@ export default function SettingsPage() {
   return (
     <div className="flex-1 flex flex-col animate-fade-in">
       <div className="flex-1 p-6 overflow-y-auto max-w-3xl">
-        {/* Tabs */}
-        <div className="flex items-center gap-6 border-b border-[#1e2a3a] mb-8">
-          {(['profile', 'api'] as const).map((tab) => (
-            <button
-              key={tab}
-              onClick={() => setActiveTab(tab)}
-              className={`pb-3 text-sm font-medium capitalize border-b-2 transition-colors ${
-                activeTab === tab
-                  ? 'border-[#f97316] text-white'
-                  : 'border-transparent text-[#64748b] hover:text-[#94a3b8]'
-              }`}
-            >
-              {tab === 'api' ? 'API' : 'Profile'}
-            </button>
-          ))}
-        </div>
-
-        {activeTab === 'profile' && (
-          <div className="space-y-6">
+        <div className="space-y-6">
             <div>
               <p className="text-[10px] font-semibold text-[#64748b] uppercase tracking-widest mb-4">Identity</p>
               <div className="bg-[#111827] border border-[#1e2a3a] rounded-lg p-5">
@@ -182,34 +162,6 @@ export default function SettingsPage() {
               </div>
             )}
           </div>
-        )}
-
-        {activeTab === 'api' && (
-          <div className="space-y-6">
-            {/* API Key */}
-            <div>
-              <p className="text-[10px] font-semibold text-[#64748b] uppercase tracking-widest mb-4">API Access</p>
-              <div className="bg-[#111827] border border-[#1e2a3a] rounded-lg p-5">
-                <label className="text-xs font-medium text-[#94a3b8] block mb-2">API Key</label>
-                <div className="flex gap-3">
-                  <input
-                    type="password"
-                    value={apiKey}
-                    readOnly
-                    className="flex-1 px-4 py-3 bg-[#0d1117] border border-[#1e2a3a] rounded font-mono text-sm text-[#64748b]"
-                  />
-                  <button className="px-4 py-2.5 bg-[#1c2333] border border-[#2d3748] text-sm text-[#94a3b8] rounded hover:border-[#374151] hover:text-white transition-colors">
-                    Reveal
-                  </button>
-                  <button className="px-4 py-2.5 bg-[#1c2333] border border-[#2d3748] text-sm text-[#94a3b8] rounded hover:border-[#374151] hover:text-white transition-colors">
-                    Regenerate
-                  </button>
-                </div>
-                <p className="text-[11px] text-[#374151] mt-2">Keep your API key secret. It grants full access to your account.</p>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
     </div>
   );

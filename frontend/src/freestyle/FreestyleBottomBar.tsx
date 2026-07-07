@@ -22,10 +22,6 @@ export default function FreestyleBottomBar({ statusText, onSwitchToGuided }: Fre
         >
           Guided Mode
         </button>
-        <div className="flex items-center gap-1.5">
-          <div className="w-1.5 h-1.5 rounded-full bg-[#22c55e]" />
-          <span className="text-[11px] text-[#4a5568]">Kernel: Ready</span>
-        </div>
       </div>
     </div>
   )
