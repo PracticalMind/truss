@@ -13,6 +13,7 @@ from app.core.config import settings
 from app.core.limiter import limiter
 from app.core.redis import set_dataframe, get_analysis_cache, set_analysis_cache, set_column_tags
 from app.core.storage import upload_dataset as storage_upload, get_or_restore_dataframe
+from app.core.dataframe_codec import encode_dataframe
 from app.services.db import get_db
 from app.services.models import User, Project
 from app.services.ml_pipeline import df_to_payload, analyze_dataframe
@@ -109,7 +110,7 @@ async def upload_dataset(
     await set_dataframe(project_id, df, sync_storage=False)
     await set_column_tags(project_id, {})
     try:
-        await storage_upload(project_id, content)
+        await storage_upload(project_id, encode_dataframe(df))
     except Exception as storage_exc:
         logger.error(f"Storage persist failed for project {project_id}: {storage_exc}. Data is in Redis only.")
 

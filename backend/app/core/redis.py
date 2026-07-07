@@ -1,14 +1,13 @@
 import asyncio
-import gzip
 import base64
 import json
 import logging
 import redis.asyncio as aioredis
 import pandas as pd
-from io import StringIO
 from typing import Any
 
 from app.core.config import settings
+from app.core.dataframe_codec import encode_dataframe, decode_dataframe
 
 logger = logging.getLogger(__name__)
 
@@ -42,24 +41,16 @@ def _spawn(coro) -> None:
     task.add_done_callback(_on_task_done)
 
 
-def _compress(s: str) -> str:
-    return base64.b64encode(gzip.compress(s.encode(), compresslevel=6)).decode()
-
-
-def _decompress(s: str) -> str:
-    try:
-        return gzip.decompress(base64.b64decode(s.encode())).decode()
-    except Exception:
-        return s
-
-
 async def get_dataframe(project_id: str) -> pd.DataFrame | None:
     if not _enabled():
         return None
     data = await get_redis().get(f"df:{project_id}")
     if data is None:
         return None
-    return pd.read_json(StringIO(_decompress(data)), orient="split")
+    try:
+        return decode_dataframe(base64.b64decode(data))
+    except Exception:
+        return None
 
 
 async def _delete_correlation_keys(project_id: str) -> None:
@@ -70,8 +61,9 @@ async def _delete_correlation_keys(project_id: str) -> None:
 
 
 async def set_dataframe(project_id: str, df: pd.DataFrame, ttl: int = 86400, *, sync_storage: bool = True) -> None:
+    raw = encode_dataframe(df)
     if _enabled():
-        payload = _compress(df.to_json(orient="split"))
+        payload = base64.b64encode(raw).decode()
         r = get_redis()
         pipe = r.pipeline()
         pipe.setex(f"df:{project_id}", ttl, payload)
@@ -80,8 +72,7 @@ async def set_dataframe(project_id: str, df: pd.DataFrame, ttl: int = 86400, *, 
         await _delete_correlation_keys(project_id)
     if sync_storage:
         from app.core.storage import upload_dataset
-        csv_bytes = df.to_csv(index=False).encode()
-        _spawn(upload_dataset(project_id, csv_bytes))
+        _spawn(upload_dataset(project_id, raw))
 
 
 async def delete_dataframe(project_id: str) -> None:

@@ -1,12 +1,12 @@
 import asyncio
 import logging
-from io import BytesIO
 from pathlib import Path
 
 import pandas as pd
 import requests
 
 from app.core.config import settings
+from app.core.dataframe_codec import decode_dataframe
 
 logger = logging.getLogger(__name__)
 
@@ -254,6 +254,9 @@ async def get_or_restore_dataframe(project_id: str) -> pd.DataFrame | None:
     if content is None:
         return None
 
-    df = pd.read_csv(BytesIO(content))
+    try:
+        df = decode_dataframe(content)
+    except Exception:
+        return None
     await set_dataframe(project_id, df)
     return df

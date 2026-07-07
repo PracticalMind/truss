@@ -1,4 +1,5 @@
 import asyncio
+import base64
 import logging
 import uuid
 from functools import partial
@@ -16,6 +17,7 @@ from app.core.redis import (
     get_column_tags, set_column_tags,
 )
 from app.core.storage import get_or_restore_dataframe
+from app.core.dataframe_codec import encode_dataframe, decode_dataframe
 from app.services.db import get_db
 from app.services.models import User, Project, PipelineState
 from app.services.ml_pipeline import (
@@ -68,7 +70,7 @@ async def _save_pipeline_state(
     db: AsyncSession,
 ) -> None:
     """Persists the step config and a data snapshot to pipeline_states."""
-    snapshot = sanitize_for_json({"data": df.values.tolist(), "columns": list(df.columns)})
+    snapshot = {"pickle": base64.b64encode(encode_dataframe(df)).decode()}
     state = PipelineState(
         project_id=parse_project_id(project_id),
         step_name=step_name,
@@ -734,10 +736,13 @@ async def restore_snapshot(
         raise HTTPException(status_code=404, detail="Pipeline state not found")
 
     snapshot = state.data_snapshot or {}
-    if not snapshot.get("columns") or snapshot.get("data") is None:
+    if "pickle" in snapshot:
+        df = decode_dataframe(base64.b64decode(snapshot["pickle"]))
+    elif snapshot.get("columns") and snapshot.get("data") is not None:
+        df = pd.DataFrame(snapshot["data"], columns=snapshot["columns"])
+    else:
         raise HTTPException(status_code=400, detail="Snapshot data is incomplete")
 
-    df = pd.DataFrame(snapshot["data"], columns=snapshot["columns"])
     await set_dataframe(project_id, df)
     return sanitize_for_json(df_to_payload(df, project_id))
 
