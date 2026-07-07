@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Check } from 'lucide-react';
+import toast from 'react-hot-toast';
 import { useAuth } from '../contexts/AuthContext';
 
 export default function SettingsPage() {
-  const { user, updatePassword } = useAuth();
+  const { user, updatePassword, updateProfile } = useAuth();
   const [activeTab, setActiveTab] = useState<'profile' | 'api'>('profile');
   const [name, setName] = useState(user?.user_metadata?.full_name ?? '');
   const [saved, setSaved] = useState(false);
@@ -16,9 +17,14 @@ export default function SettingsPage() {
 
   const canChangePassword = (import.meta.env.VITE_AUTH_PROVIDER ?? 'local') === 'supabase';
 
-  const handleSave = () => {
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2500);
+  const handleSave = async () => {
+    try {
+      await updateProfile(name.trim());
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2500);
+    } catch (err: any) {
+      toast.error(err.message || 'Failed to save changes');
+    }
   };
 
   const handleChangePassword = async () => {

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
 import { Play, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { modelApi, type OptimizeResponse } from '../../services/api/model'
 import { Section, OptionCard } from './MissingValuesPanel'
@@ -109,6 +110,7 @@ export default function OptimizationPanel({ projectId }: Props) {
         param_choices: Object.fromEntries(categoricalParams.map(p => [p.key, getChoices(p)])),
       }),
     onSuccess: setResult,
+    onError: (err: Error) => toast.error(err.message),
   })
 
   const improvement     = result?.improvement ?? 0

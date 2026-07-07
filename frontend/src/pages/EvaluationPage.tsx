@@ -38,6 +38,8 @@ export default function EvaluationPage({ projectId, onNext }: EvaluationPageProp
 
   const confusionMatrix = evalData?.confusion_matrix
   const classNames = evalData?.class_names ?? []
+  const bestMetrics =
+    (evalData?.results?.find((r) => r.model === evalData.best_model) ?? evalData?.results?.[0])?.metrics
 
   return (
     <div className="animate-fade-in" style={{ paddingBottom: '64px' }}>
@@ -86,13 +88,11 @@ export default function EvaluationPage({ projectId, onNext }: EvaluationPageProp
               Regression task - showing R², RMSE and MAE.
               Precision / Recall / F1 are classification metrics and do not apply here.
             </p>
-            {evalData && (
-              <div className="mt-2 flex gap-6">
-                {(evalData as any).r2 != null && <span className="text-xs text-[#64748b]">R²: <span className="text-[#22c55e] font-mono">{((evalData as any).r2 * 100).toFixed(2)}%</span></span>}
-                {(evalData as any).rmse != null && <span className="text-xs text-[#64748b]">RMSE: <span className="text-[#f97316] font-mono">{(evalData as any).rmse?.toFixed(4)}</span></span>}
-                {(evalData as any).mae != null && <span className="text-xs text-[#64748b]">MAE: <span className="text-[#94a3b8] font-mono">{(evalData as any).mae?.toFixed(4)}</span></span>}
-              </div>
-            )}
+            <div className="mt-2 flex gap-6">
+              <span className="text-xs text-[#64748b]">R²: <span className="text-[#22c55e] font-mono">{(evalData.accuracy * 100).toFixed(2)}%</span></span>
+              {bestMetrics && bestMetrics.rmse != null && <span className="text-xs text-[#64748b]">RMSE: <span className="text-[#f97316] font-mono">{bestMetrics.rmse.toFixed(4)}</span></span>}
+              {bestMetrics && bestMetrics.mae != null && <span className="text-xs text-[#64748b]">MAE: <span className="text-[#94a3b8] font-mono">{bestMetrics.mae.toFixed(4)}</span></span>}
+            </div>
           </div>
         )}
 

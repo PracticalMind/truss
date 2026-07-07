@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useQuery, useMutation } from '@tanstack/react-query'
+import toast from 'react-hot-toast'
 import { ChevronRight, ChevronDown, Play, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import { modelApi, type OptimizeResponse } from '../services/api/model'
 import type { PipelineStep } from '../types'
@@ -115,6 +116,7 @@ export default function OptimizationPage({ projectId, onNext }: OptimizationPage
         param_choices: Object.fromEntries(categoricalParams.map(p => [p.key, getChoices(p)])),
       }),
     onSuccess: setResult,
+    onError: (err: Error) => toast.error(err.message),
   })
 
   const improvement      = result?.improvement ?? 0

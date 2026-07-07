@@ -20,6 +20,8 @@ export default function EvaluationPanel({ projectId }: Props) {
     ? Object.entries(data.feature_importance).sort((a, b) => b[1] - a[1]).slice(0, 8)
     : null
   const maxImp = featureImportance?.[0]?.[1] ?? 1
+  const bestMetrics =
+    (data?.results?.find((r) => r.model === data.best_model) ?? data?.results?.[0])?.metrics
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden">
@@ -140,15 +142,21 @@ export default function EvaluationPanel({ projectId }: Props) {
               </Section>
             )}
 
-            {isRegression && (data as any).rmse != null && (
+            {isRegression && bestMetrics && (bestMetrics.rmse != null || bestMetrics.mae != null) && (
               <Section label="Regression Metrics">
                 <div className="flex flex-col gap-1">
-                  {[['RMSE', (data as any).rmse?.toFixed(4)], ['MAE', (data as any).mae?.toFixed(4)]].filter(([, v]) => v != null).map(([label, value]) => (
-                    <div key={label} className="flex items-center justify-between px-2.5 py-2 bg-[#111827] border border-[#1e2a3a] rounded">
-                      <span className="text-[11px] text-[#64748b]">{label}</span>
-                      <span className="text-[11px] font-mono text-[#e2e8f0]">{value}</span>
+                  {bestMetrics.rmse != null && (
+                    <div className="flex items-center justify-between px-2.5 py-2 bg-[#111827] border border-[#1e2a3a] rounded">
+                      <span className="text-[11px] text-[#64748b]">RMSE</span>
+                      <span className="text-[11px] font-mono text-[#e2e8f0]">{bestMetrics.rmse.toFixed(4)}</span>
                     </div>
-                  ))}
+                  )}
+                  {bestMetrics.mae != null && (
+                    <div className="flex items-center justify-between px-2.5 py-2 bg-[#111827] border border-[#1e2a3a] rounded">
+                      <span className="text-[11px] text-[#64748b]">MAE</span>
+                      <span className="text-[11px] font-mono text-[#e2e8f0]">{bestMetrics.mae.toFixed(4)}</span>
+                    </div>
+                  )}
                 </div>
               </Section>
             )}

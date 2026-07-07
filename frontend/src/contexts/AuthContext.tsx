@@ -23,6 +23,7 @@ interface AuthContextType {
   signOut: () => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   updatePassword: (newPassword: string) => Promise<void>;
+  updateProfile: (fullName: string) => Promise<void>;
   exitRecovery: () => void;
 }
 
@@ -196,6 +197,24 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     if (error) throw error;
   };
 
+  const updateProfile = async (fullName: string) => {
+    if (AUTH_PROVIDER === 'local') {
+      const current = localGetUser();
+      if (current) {
+        const updated: User = { ...current, user_metadata: { ...current.user_metadata, full_name: fullName } };
+        localStorage.setItem(LOCAL_USER_KEY, JSON.stringify(updated));
+        setUser(updated);
+      }
+      return;
+    }
+    if (!supabase) throw new Error('Supabase is not configured');
+    const { data, error } = await supabase.auth.updateUser({ data: { full_name: fullName } });
+    if (error) throw error;
+    if (data.user) {
+      setUser({ id: data.user.id, email: data.user.email!, user_metadata: data.user.user_metadata });
+    }
+  };
+
   const exitRecovery = () => {
     setRecoveryMode(false);
     if (typeof window !== 'undefined') {
@@ -205,7 +224,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   return (
     <AuthContext.Provider
-      value={{ user, loading, recoveryMode, signUp, signIn, signOut, resetPassword, updatePassword, exitRecovery }}
+      value={{ user, loading, recoveryMode, signUp, signIn, signOut, resetPassword, updatePassword, updateProfile, exitRecovery }}
     >
       {children}
     </AuthContext.Provider>
