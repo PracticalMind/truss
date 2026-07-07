@@ -22,6 +22,9 @@
 ---
 
 Truss is an open-source, no-code machine learning platform. Upload a CSV, clean your data, train a model, and export the results without touching a line of Python. It runs as a hosted service at [truss.run](https://truss.run) and can be self-hosted in minutes with Docker Compose.
+<p align="center">
+  <img width="512" height="240" alt="truss-final" src="https://github.com/user-attachments/assets/3ee5da5c-0448-46fd-9926-aaf79692320a" />
+</p>
 
 ## Features
 
