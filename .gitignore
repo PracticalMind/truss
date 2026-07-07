@@ -49,3 +49,6 @@ Thumbs.db
 # Build artifacts
 build/
 *.egg-info/
+
+.claude
+CLAUDE.md
