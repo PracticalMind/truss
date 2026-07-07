@@ -41,14 +41,23 @@ function buildHeaders(
   };
 }
 
-function parseError(res: Response, json: { error?: string; detail?: unknown } | null): Error {
+export class ApiError extends Error {
+  status: number;
+  constructor(message: string, status: number) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
+function parseError(res: Response, json: { error?: string; detail?: unknown } | null): ApiError {
   if (json) {
     const detail = Array.isArray(json.detail)
       ? (json.detail as { msg?: string }[]).map(d => d.msg ?? JSON.stringify(d)).join(', ')
       : json.detail;
-    return new Error(json.error ?? (detail as string) ?? `HTTP ${res.status}`);
+    return new ApiError(json.error ?? (detail as string) ?? `HTTP ${res.status}`, res.status);
   }
-  return new Error(`HTTP ${res.status}: ${res.statusText || 'Server error'}`);
+  return new ApiError(`HTTP ${res.status}: ${res.statusText || 'Server error'}`, res.status);
 }
 
 export async function apiRequest<T>(path: string, options: RequestInit = {}): Promise<T> {
