@@ -6,7 +6,6 @@ import {
   Github,
   FileText,
   Mail,
-  Shield,
   ChevronRight,
   Zap,
 } from 'lucide-react';
@@ -110,7 +109,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
               </FadeIn>
               <FadeIn y={24} delay={0.18}>
                 <p className="text-white/50 leading-relaxed mb-8 max-w-md" style={{ fontSize: 'clamp(0.95rem, 1.4vw, 1.125rem)' }}>
-                  Orchestrate high-performance pipelines, clean datasets, and deploy neural networks through a professional, tool-first visual interface.
+                  Clean datasets, train models, and export results through a professional, tool-first visual interface — no code required.
                 </p>
               </FadeIn>
               <FadeIn y={20} delay={0.28}>
@@ -118,9 +117,6 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                   <button onClick={() => onNavigate('register')} className="flex items-center gap-2 px-5 py-2.5 bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-semibold rounded transition-colors cursor-pointer">
                     Start Free
                     <ChevronRight size={15} />
-                  </button>
-                  <button className="text-sm text-white/60 hover:text-white transition-colors px-4 py-2.5 cursor-pointer">
-                    Watch Demo
                   </button>
                 </div>
               </FadeIn>
@@ -204,9 +200,9 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
           <div ref={workflowRef} className="max-w-3xl mx-auto w-full">
             <div className="flex items-center mb-0">
               {[
-                { num: '01.', label: 'Upload', icon: <Upload size={22} />, desc: 'Ingest CSV, JSON, or SQL streams directly into our secure data lake.', delay: 0.35 },
-                { num: '02.', label: 'Clean', icon: <Sparkles size={22} />, desc: 'Automated outlier detection and normalization with one click.', delay: 0.5 },
-                { num: '03.', label: 'Train & Export', icon: <Rocket size={22} />, desc: 'Hyperparameter tuning and deployment as a REST API or ONNX file.', delay: 0.65 },
+                { num: '01.', label: 'Upload', icon: <Upload size={22} />, desc: 'Upload a CSV and preview your dataset instantly.', delay: 0.35 },
+                { num: '02.', label: 'Clean', icon: <Sparkles size={22} />, desc: 'Outlier detection, encoding, and scaling with one click.', delay: 0.5 },
+                { num: '03.', label: 'Train & Export', icon: <Rocket size={22} />, desc: 'Hyperparameter tuning, evaluation, and export of models and predictions.', delay: 0.65 },
               ].map((step, i) => (
                 <>
                   <motion.div
@@ -273,10 +269,10 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                   </span>
                 </div>
                 <p className="text-sm text-white/50 leading-relaxed mb-6">
-                  Granular control over every layer. Drag-and-drop nodes to define custom neural architectures and loss functions. Ideal for specialized research tasks.
+                  Full control over every step through on-demand panels — filter rows, engineer and select features, and cross-validate. Ideal for hands-on workflows.
                 </p>
                 <ul className="space-y-3 mb-8">
-                  {['Node-based visual graph', 'Custom activation functions', 'Real-time epoch visualization'].map((f) => (
+                  {['On-demand step panels', 'Feature engineering & selection', 'Cross-validation'].map((f) => (
                     <li key={f} className="flex items-center gap-2.5">
                       <div className="w-4 h-4 rounded-full bg-[#f97316]/10 border border-[#f97316]/30 flex items-center justify-center flex-shrink-0">
                         <Check size={9} className="text-[#f97316]" />
@@ -372,7 +368,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                 <p className="text-xs text-white/30 mt-1">MIT licensed</p>
                 <div className="h-px bg-white/[0.06] my-5" />
                 <ul className="space-y-3 flex-1 mb-6">
-                  {['Submit issues & PRs', 'Node-based visual graph', 'Local-first dev workflow', 'Open roadmap'].map((f) => (
+                  {['Submit issues & PRs', 'Self-hostable stack', 'Local-first dev workflow', 'Open roadmap'].map((f) => (
                     <li key={f} className="flex items-center gap-2">
                       <Check size={13} className="text-[#22c55e] flex-shrink-0" />
                       <span className="text-sm text-white/70">{f}</span>
@@ -403,7 +399,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                     </li>
                   ))}
                 </ul>
-                <a href="#" className="w-full py-2.5 border border-white/[0.12] text-sm text-white/60 hover:text-white hover:border-white/25 rounded transition-colors cursor-pointer flex items-center justify-center">
+                <a href="https://github.com/PracticalMind/truss#readme" target="_blank" rel="noreferrer" className="w-full py-2.5 border border-white/[0.12] text-sm text-white/60 hover:text-white hover:border-white/25 rounded transition-colors cursor-pointer flex items-center justify-center">
                   Read the Docs
                 </a>
               </div>
@@ -422,12 +418,11 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
           </div>
           <div className="flex items-center gap-6">
             {[
-              { label: 'GitHub', icon: <Github size={13} /> },
-              { label: 'Docs', icon: <FileText size={13} /> },
-              { label: 'Contact', icon: <Mail size={13} /> },
-              { label: 'Privacy', icon: <Shield size={13} /> },
+              { label: 'GitHub', icon: <Github size={13} />, href: 'https://github.com/PracticalMind/truss' },
+              { label: 'Docs', icon: <FileText size={13} />, href: 'https://github.com/PracticalMind/truss#readme' },
+              { label: 'Contact', icon: <Mail size={13} />, href: 'https://github.com/PracticalMind/truss/issues' },
             ].map((l) => (
-              <a key={l.label} href="#" className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors">
+              <a key={l.label} href={l.href} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors">
                 {l.icon}
                 {l.label}
               </a>
