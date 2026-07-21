@@ -85,7 +85,7 @@ export default function CreateProjectModal({ onClose, onCreated }: CreateProject
           <button
             onClick={handleCreate}
             disabled={createMutation.isPending}
-            className="flex items-center gap-2 px-5 py-2 bg-[#f97316] hover:bg-[#ea6a0a] disabled:opacity-50 text-white text-xs font-semibold rounded-lg"
+            className="flex items-center gap-2 px-5 py-2 bg-[#f97316] hover:bg-[#ea6c0a] disabled:opacity-50 text-white text-xs font-semibold rounded-lg"
           >
             {createMutation.isPending ? 'Creating…' : 'Create Project →'}
           </button>
