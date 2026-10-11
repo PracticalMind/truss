@@ -375,7 +375,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                     </li>
                   ))}
                 </ul>
-                <a href="https://github.com/PracticalMind/truss" target="_blank" rel="noopener noreferrer" className="w-full py-2.5 bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-semibold rounded transition-colors cursor-pointer flex items-center justify-center gap-2">
+                <a href="https://github.com/baranylcn/truss" target="_blank" rel="noopener noreferrer" className="w-full py-2.5 bg-[#f97316] hover:bg-[#ea6c0a] text-white text-sm font-semibold rounded transition-colors cursor-pointer flex items-center justify-center gap-2">
                   <Github size={14} />
                   View on GitHub
                 </a>
@@ -399,7 +399,7 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
                     </li>
                   ))}
                 </ul>
-                <a href="https://github.com/PracticalMind/truss#readme" target="_blank" rel="noreferrer" className="w-full py-2.5 border border-white/[0.12] text-sm text-white/60 hover:text-white hover:border-white/25 rounded transition-colors cursor-pointer flex items-center justify-center">
+                <a href="https://github.com/baranylcn/truss#readme" target="_blank" rel="noreferrer" className="w-full py-2.5 border border-white/[0.12] text-sm text-white/60 hover:text-white hover:border-white/25 rounded transition-colors cursor-pointer flex items-center justify-center">
                   Read the Docs
                 </a>
               </div>
@@ -418,9 +418,9 @@ export default function LandingPage({ onNavigate }: LandingPageProps) {
           </div>
           <div className="flex items-center gap-6">
             {[
-              { label: 'GitHub', icon: <Github size={13} />, href: 'https://github.com/PracticalMind/truss' },
-              { label: 'Docs', icon: <FileText size={13} />, href: 'https://github.com/PracticalMind/truss#readme' },
-              { label: 'Contact', icon: <Mail size={13} />, href: 'https://github.com/PracticalMind/truss/issues' },
+              { label: 'GitHub', icon: <Github size={13} />, href: 'https://github.com/baranylcn/truss' },
+              { label: 'Docs', icon: <FileText size={13} />, href: 'https://github.com/baranylcn/truss#readme' },
+              { label: 'Contact', icon: <Mail size={13} />, href: 'https://github.com/baranylcn/truss/issues' },
             ].map((l) => (
               <a key={l.label} href={l.href} target="_blank" rel="noreferrer" className="flex items-center gap-1.5 text-xs text-white/30 hover:text-white/60 transition-colors">
                 {l.icon}
