@@ -4,7 +4,7 @@
 
 If you discover a security vulnerability in Truss, please do not open a public GitHub issue. Instead, use GitHub's private vulnerability reporting feature:
 
-**[Report a vulnerability](https://github.com/PracticalMind/truss/security/advisories/new)**
+**[Report a vulnerability](https://github.com/baranylcn/truss/security/advisories/new)**
 
 Include the following in your report:
 

@@ -13,7 +13,7 @@ Thanks for your interest in contributing. This document covers how to get the pr
 ### Run the full stack
 
 ```bash
-git clone https://github.com/PracticalMind/truss.git
+git clone https://github.com/baranylcn/truss.git
 cd truss
 docker compose up --build
 ```
@@ -78,7 +78,7 @@ truss/
 
 ## Reporting Issues
 
-Use [GitHub Issues](https://github.com/PracticalMind/truss/issues). Include:
+Use [GitHub Issues](https://github.com/baranylcn/truss/issues). Include:
 - What you expected to happen
 - What actually happened
 - Steps to reproduce

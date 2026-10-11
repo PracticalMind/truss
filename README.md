@@ -13,7 +13,7 @@
 </p>
 
 <p align="center">
-  <img alt="License" src="https://img.shields.io/github/license/PracticalMind/truss" />
+  <img alt="License" src="https://img.shields.io/github/license/baranylcn/truss" />
   <img alt="Python" src="https://img.shields.io/badge/python-3.11+-blue" />
   <img alt="FastAPI" src="https://img.shields.io/badge/FastAPI-0.128+-green" />
   <img alt="React" src="https://img.shields.io/badge/React-18-61dafb" />
@@ -86,7 +86,7 @@ Go to [truss.run](https://truss.run) and create a free account. No setup require
 **Prerequisites:** Docker and Docker Compose installed.
 
 ```bash
-git clone https://github.com/PracticalMind/truss.git
+git clone https://github.com/baranylcn/truss.git
 cd truss
 ```
 
